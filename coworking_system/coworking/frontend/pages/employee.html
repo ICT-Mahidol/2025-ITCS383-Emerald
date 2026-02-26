@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Employee Dashboard - CoWork Space</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar">
+    <a class="navbar-brand" href="/pages/employee.html">
+      <span class="logo-icon">🏢</span>
+      <span>CoWork Space</span>
+    </a>
+    <div class="flex gap-1" style="align-items:center">
+      <button class="hamburger" id="hamburger">☰</button>
+      <div class="nav-user">
+        <div class="avatar" id="nav-avatar">E</div>
+        <span id="nav-name">Employee</span>
+        <span class="badge badge-info" style="background:#E3F2FD;color:#1565C0;font-size:0.72rem">EMPLOYEE</span>
+      </div>
+      <button class="btn-logout" onclick="Auth.logout()">Logout</button>
+    </div>
+  </nav>
+
+  <div class="page-wrapper">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-label">Employee Menu</div>
+        <a class="sidebar-link active" href="#" data-section="sec-home" onclick="navigate('sec-home')">
+          <span class="icon">🏠</span> Dashboard
+        </a>
+        <a class="sidebar-link" href="#" data-section="sec-daily" onclick="navigate('sec-daily')">
+          <span class="icon">📅</span> Daily Bookings
+        </a>
+        <a class="sidebar-link" href="#" data-section="sec-inventory" onclick="navigate('sec-inventory')">
+          <span class="icon">📦</span> Inventory
+        </a>
+        <a class="sidebar-link" href="#" data-section="sec-cctv" onclick="navigate('sec-cctv')">
+          <span class="icon">📹</span> CCTV Monitor
+        </a>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+
+      <!-- ===== HOME ===== -->
+      <section class="page-section active" id="sec-home">
+        <div class="welcome-banner">
+          <div class="welcome-text">
+            <h2 id="welcome-msg">Welcome, Employee!</h2>
+            <p>Manage daily operations and monitor the workspace.</p>
+          </div>
+          <div class="welcome-icon">👷</div>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon">📅</div>
+            <div class="stat-info">
+              <div class="stat-value" id="stat-today-bookings">-</div>
+              <div class="stat-label">Today's Bookings</div>
+            </div>
+          </div>
+          <div class="stat-card green">
+            <div class="stat-icon">✅</div>
+            <div class="stat-info">
+              <div class="stat-value" id="stat-today-paid">-</div>
+              <div class="stat-label">Paid Today</div>
+            </div>
+          </div>
+          <div class="stat-card orange">
+            <div class="stat-icon">⏳</div>
+            <div class="stat-info">
+              <div class="stat-value" id="stat-today-pending">-</div>
+              <div class="stat-label">Pending Today</div>
+            </div>
+          </div>
+          <div class="stat-card red">
+            <div class="stat-icon">📦</div>
+            <div class="stat-info">
+              <div class="stat-value" id="stat-low-stock">-</div>
+              <div class="stat-label">Low Stock Items</div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Today's Bookings Overview</span>
+            <span class="text-muted" id="today-date-label"></span>
+          </div>
+          <div id="home-daily-bookings"><div class="spinner"></div></div>
+        </div>
+      </section>
+
+      <!-- ===== DAILY BOOKINGS ===== -->
+      <section class="page-section" id="sec-daily">
+        <h2 class="mb-2">Daily Bookings</h2>
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Select Date</span>
+            <input type="date" id="daily-date-picker" class="form-control" style="width:auto"
+              onchange="loadDailyBookings()">
+          </div>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th><th>Customer</th><th>Email</th><th>Slot</th>
+                  <th>Time</th><th>Desks</th><th>Total</th><th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="daily-table-body">
+                <tr><td colspan="8" class="text-center"><div class="spinner"></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== INVENTORY ===== -->
+      <section class="page-section" id="sec-inventory">
+        <div class="flex-between mb-2">
+          <h2>Inventory Management</h2>
+          <button class="btn btn-primary btn-sm" onclick="openModal('add-inventory-modal')">+ Add Item</button>
+        </div>
+        <div class="card">
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr><th>#</th><th>Item</th><th>Category</th><th>Quantity</th><th>Unit</th><th>Actions</th></tr>
+              </thead>
+              <tbody id="inventory-table-body">
+                <tr><td colspan="6" class="text-center"><div class="spinner"></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== CCTV ===== -->
+      <section class="page-section" id="sec-cctv">
+        <div class="flex-between mb-2">
+          <h2>CCTV Monitoring</h2>
+          <button class="btn btn-sm btn-secondary" onclick="loadCCTV()">🔄 Refresh</button>
+        </div>
+        <div class="cctv-grid" id="cctv-grid">
+          <div class="spinner"></div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Add Inventory Modal -->
+  <div class="modal-overlay" id="add-inventory-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">Add Inventory Item</span>
+        <button class="modal-close" onclick="closeModal('add-inventory-modal')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Item Name</label>
+          <input type="text" id="inv-name" class="form-control" placeholder="e.g. Ergonomic Chair">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Category</label>
+          <select id="inv-category" class="form-control">
+            <option value="desk">Desk</option>
+            <option value="chair">Chair</option>
+            <option value="power_outlet">Power Outlet</option>
+            <option value="computer">Computer</option>
+            <option value="snack">Snack</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Quantity</label>
+            <input type="number" id="inv-qty" class="form-control" value="1" min="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Unit</label>
+            <input type="text" id="inv-unit" class="form-control" value="unit">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('add-inventory-modal')">Cancel</button>
+        <button class="btn btn-primary" id="btn-add-inv" onclick="addInventoryItem()">Add Item</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Inventory Modal -->
+  <div class="modal-overlay" id="edit-inventory-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">Update Stock Quantity</span>
+        <button class="modal-close" onclick="closeModal('edit-inventory-modal')">✕</button>
+      </div>
+      <div class="modal-body">
+        <p id="edit-inv-name" class="mb-2" style="font-weight:600"></p>
+        <div class="form-group">
+          <label class="form-label">New Quantity</label>
+          <input type="number" id="edit-inv-qty" class="form-control" min="0">
+        </div>
+        <input type="hidden" id="edit-inv-id">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('edit-inventory-modal')">Cancel</button>
+        <button class="btn btn-primary" id="btn-update-inv" onclick="updateInventoryItem()">Update</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/ui.js"></script>
+  <script>
+    // ---- Auth Guard ----
+    if (!Auth.isLoggedIn()) window.location.href = '/pages/login.html';
+    const user = Auth.getUser();
+    if (!['employee','manager'].includes(user?.role)) window.location.href = '/pages/login.html';
+
+    document.getElementById('nav-name').textContent   = user.firstName + ' ' + user.lastName;
+    document.getElementById('nav-avatar').textContent = user.firstName[0].toUpperCase();
+    document.getElementById('welcome-msg').textContent = 'Welcome, ' + user.firstName + '!';
+
+    // Set today's date
+    const todayStr = new Date().toISOString().slice(0, 10);
+    document.getElementById('daily-date-picker').value = todayStr;
+    document.getElementById('today-date-label').textContent = formatDate(todayStr);
+
+    initSidebar();
+
+    function navigate(section) {
+      showSection(section);
+      if (section === 'sec-home')      loadHome();
+      if (section === 'sec-daily')     loadDailyBookings();
+      if (section === 'sec-inventory') loadInventory();
+      if (section === 'sec-cctv')      loadCCTV();
+    }
+
+    // ============================================================
+    // HOME
+    // ============================================================
+    async function loadHome() {
+      const [bookingsRes, invRes] = await Promise.all([
+        API.getDailyBookings(todayStr),
+        API.getInventory(),
+      ]);
+      if (bookingsRes.success) {
+        const b = bookingsRes.bookings || [];
+        document.getElementById('stat-today-bookings').textContent = b.length;
+        document.getElementById('stat-today-paid').textContent     = b.filter(x => x.status === 'paid').length;
+        document.getElementById('stat-today-pending').textContent  = b.filter(x => x.status === 'pending').length;
+        document.getElementById('home-daily-bookings').innerHTML = b.length
+          ? `<div class="table-wrapper"><table>
+              <thead><tr><th>Customer</th><th>Slot</th><th>Desks</th><th>Total</th><th>Status</th></tr></thead>
+              <tbody>${b.map(x => `
+                <tr>
+                  <td>${x.first_name} ${x.last_name}</td>
+                  <td>${x.time_slot}</td>
+                  <td>${x.num_desks}</td>
+                  <td>${formatCurrency(x.total_price)}</td>
+                  <td>${badgeHtml(x.status)}</td>
+                </tr>`).join('')}
+              </tbody></table></div>`
+          : emptyState('No bookings today', '📅');
+      }
+      if (invRes.success) {
+        const lowStock = (invRes.items || []).filter(i => i.quantity < 5).length;
+        document.getElementById('stat-low-stock').textContent = lowStock;
+      }
+    }
+
+    // ============================================================
+    // DAILY BOOKINGS
+    // ============================================================
+    async function loadDailyBookings() {
+      const date  = document.getElementById('daily-date-picker').value || todayStr;
+      const tbody = document.getElementById('daily-table-body');
+      tbody.innerHTML = `<tr><td colspan="8" class="text-center"><div class="spinner"></div></td></tr>`;
+      const res = await API.getDailyBookings(date);
+      const bookings = res.bookings || [];
+      tbody.innerHTML = bookings.length
+        ? bookings.map(b => `
+          <tr>
+            <td>${b.id}</td>
+            <td>${b.first_name} ${b.last_name}</td>
+            <td>${b.email}</td>
+            <td>${b.time_slot}</td>
+            <td>${b.start_time?.slice(0,5)} – ${b.end_time?.slice(0,5)}</td>
+            <td>${b.num_desks}</td>
+            <td>${formatCurrency(b.total_price)}</td>
+            <td>${badgeHtml(b.status)}</td>
+          </tr>`).join('')
+        : `<tr><td colspan="8">${emptyState('No bookings for this date', '📅')}</td></tr>`;
+    }
+
+    // ============================================================
+    // INVENTORY
+    // ============================================================
+    async function loadInventory() {
+      const res   = await API.getInventory();
+      const tbody = document.getElementById('inventory-table-body');
+      const items = res.items || [];
+      tbody.innerHTML = items.length
+        ? items.map(i => `
+          <tr>
+            <td>${i.id}</td>
+            <td>${i.item_name}</td>
+            <td><span class="badge badge-info" style="background:#E3F2FD;color:#1565C0">${i.category.replace('_',' ')}</span></td>
+            <td><strong style="color:${i.quantity < 5 ? '#C62828' : '#2E7D32'}">${i.quantity}</strong></td>
+            <td>${i.unit}</td>
+            <td>
+              <button class="btn btn-sm btn-outline" onclick="openEditInventory(${i.id},'${i.item_name}',${i.quantity})">
+                Edit
+              </button>
+            </td>
+          </tr>`).join('')
+        : `<tr><td colspan="6">${emptyState('No inventory items', '📦')}</td></tr>`;
+    }
+
+    function openEditInventory(id, name, qty) {
+      document.getElementById('edit-inv-id').value   = id;
+      document.getElementById('edit-inv-name').textContent = name;
+      document.getElementById('edit-inv-qty').value  = qty;
+      openModal('edit-inventory-modal');
+    }
+
+    async function updateInventoryItem() {
+      const id  = document.getElementById('edit-inv-id').value;
+      const qty = parseInt(document.getElementById('edit-inv-qty').value);
+      const btn = document.getElementById('btn-update-inv');
+      setLoading(btn, true);
+      const res = await API.updateInventory(id, qty);
+      if (res.success) {
+        closeModal('edit-inventory-modal');
+        showToast('Inventory updated', 'success');
+        loadInventory();
+      } else {
+        showToast(res.message || 'Update failed', 'error');
+      }
+      setLoading(btn, false);
+    }
+
+    async function addInventoryItem() {
+      const btn = document.getElementById('btn-add-inv');
+      setLoading(btn, true);
+      const body = {
+        itemName:  document.getElementById('inv-name').value,
+        category:  document.getElementById('inv-category').value,
+        quantity:  parseInt(document.getElementById('inv-qty').value),
+        unit:      document.getElementById('inv-unit').value,
+      };
+      const res = await API.addInventory(body);
+      if (res.success) {
+        closeModal('add-inventory-modal');
+        showToast('Item added', 'success');
+        loadInventory();
+      } else {
+        showToast(res.message || 'Failed to add item', 'error');
+      }
+      setLoading(btn, false);
+    }
+
+    // ============================================================
+    // CCTV
+    // ============================================================
+    async function loadCCTV() {
+      const res  = await API.getCCTV();
+      const grid = document.getElementById('cctv-grid');
+      const feeds = res.feeds || [];
+      grid.innerHTML = feeds.length
+        ? feeds.map(f => `
+          <div class="cctv-feed">
+            <img src="${f.mockFrame}" alt="${f.name}" loading="lazy"
+              onerror="this.src='https://picsum.photos/640/360?grayscale'">
+            <div class="cctv-label">
+              <span>📹 ${f.name} — ${f.location}</span>
+              <span class="flex gap-1" style="align-items:center">
+                <span class="cctv-dot"></span>
+                <span class="badge badge-online">${f.status}</span>
+              </span>
+            </div>
+          </div>`).join('')
+        : emptyState('No cameras configured', '📹');
+    }
+
+    // ---- Initial load ----
+    loadHome();
+  </script>
+</body>
+</html>
