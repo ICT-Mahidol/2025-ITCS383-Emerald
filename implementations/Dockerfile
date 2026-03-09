@@ -20,6 +20,7 @@ COPY --from=builder /app/node_modules ./node_modules
 # Copy application files
 COPY package*.json ./
 COPY server.js ./
+COPY lib ./lib
 COPY public ./public
 
 # Set ownership

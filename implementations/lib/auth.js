@@ -1,6 +1,8 @@
-function requireRole(sql, ...roles) {
+function requireRole(sqlOrGetter, ...roles) {
   return async (req, res, next) => {
     try {
+      // Support both direct sql and getter function () => sql
+      const sql = typeof sqlOrGetter === 'function' && sqlOrGetter._isGetter ? sqlOrGetter() : sqlOrGetter;
       const userId = req.body.userId || req.params.userId || req.query.userId;
       if (!userId) {
         return res.status(401).json({ error: 'Authentication required.' });

@@ -7,34 +7,34 @@ A full-featured co-working space management system with desk booking, membership
 ## Features
 
 ### Customer Features
-- 📝 **Account Registration & Login** — secure sign-up with encrypted PII storage
-- 🪑 **Desk Booking** — 3-step flow: date selection, time slot picker with availability grid, payment
-- 💳 **Multiple Payment Methods** — Credit Card, Bank Transfer, TrueWallet (simulated)
-- 📋 **My Bookings** — view, track status, and cancel reservations (1-day-before policy)
-- 👤 **Profile Management** — view and update personal information
-- 🏷️ **Membership Plans** — Day, Month, and Year subscriptions
+- Account Registration & Login — secure sign-up with encrypted PII storage
+- Desk Booking — 3-step flow: date selection, time slot picker with availability grid, payment
+- Multiple Payment Methods — Credit Card, Bank Transfer, TrueWallet (simulated)
+- My Bookings — view, track status, and cancel reservations (1-day-before policy)
+- Profile Management — view and update personal information
+- Membership Plans — Day, Month, and Year subscriptions
 
 ### Employee Features
-- 📅 **Reservation Management** — view all reservations by date
-- ✅ **Customer Check-In** — verify and check in confirmed bookings
-- 🔧 **Equipment Inventory** — track and update stock levels
-- 💰 **Expense Recording** — log daily operational expenses
-- 📹 **CCTV Monitoring** — simulated camera feed dashboard (stub API)
+- Reservation Management — view all reservations by date
+- Customer Check-In — verify and check in confirmed bookings
+- Equipment Inventory — track and update stock levels
+- Expense Recording — log daily operational expenses
+- CCTV Monitoring — simulated camera feed dashboard (stub API)
 
 ### Manager Features
-- 📊 **Revenue Dashboard** — daily/monthly revenue overview with breakdown
-- 📈 **Income Reports** — monthly revenue vs. expenses with net profit calculation
-- 👥 **Employee Management** — add, view, and remove employee accounts
-- 🏦 **Banking API** — simulated bank transfer endpoint
+- Revenue Dashboard — daily/monthly revenue overview with breakdown
+- Income Reports — monthly revenue vs. expenses with net profit calculation
+- Employee Management — add, view, and remove employee accounts
+- Banking API — simulated bank transfer endpoint
 
 ### Security & Infrastructure
-- 🔐 **bcrypt Password Hashing** — salted hashing with 10 rounds
-- 🔒 **AES-256-CBC Encryption** — customer PII (name, phone, address) encrypted at rest
-- 🛡️ **Role-Based Access Control** — server-side role verification (customer, employee, manager)
-- ⏰ **Booking Expiry** — unpaid reservations auto-expire after 30 minutes
-- 🗄️ **Neon PostgreSQL** — serverless database with indexed queries
-- 🐳 **Docker** — containerized with multi-stage Alpine build
-- 🚀 **CI/CD** — GitHub Actions → GHCR → Render auto-deploy
+- bcrypt Password Hashing — salted hashing with 10 rounds
+- AES-256-CBC Encryption — customer PII (name, phone, address) encrypted at rest
+- Role-Based Access Control — server-side role verification (customer, employee, manager)
+- Booking Expiry — unpaid reservations auto-expire after 30 minutes
+- Neon PostgreSQL — serverless database with indexed queries
+- Docker — containerized with multi-stage Alpine build
+- CI/CD — GitHub Actions with ESLint + Jest tests + Docker build
 
 ## Tech Stack
 
@@ -45,6 +45,8 @@ A full-featured co-working space management system with desk booking, membership
 | Database     | Neon (Serverless PostgreSQL)        |
 | Encryption   | AES-256-CBC (Node.js crypto)        |
 | Auth         | bcryptjs (password hashing)         |
+| Linter       | ESLint                              |
+| Testing      | Jest, Supertest                     |
 | Container    | Docker (Alpine)                     |
 | Registry     | GitHub Container Registry           |
 | CI/CD        | GitHub Actions                      |
@@ -54,29 +56,38 @@ A full-featured co-working space management system with desk booking, membership
 
 ```
 ├── .github/workflows/
-│   └── workflow.yml            # CI/CD pipeline
-├── lib/
-│   ├── crypto.js               # AES-256-CBC encrypt/decrypt helpers
-│   ├── auth.js                 # Role-based access control middleware
-│   └── expiry.js               # Background job: expire unpaid bookings
-├── public/
-│   ├── index.html              # Welcome / landing page
-│   ├── login.html              # Sign in (role-based redirect)
-│   ├── register.html           # Create account page
-│   ├── dashboard.html          # Customer dashboard
-│   ├── profile.html            # User profile page
-│   ├── booking.html            # 3-step desk booking flow
-│   ├── my-bookings.html        # View / cancel bookings
-│   ├── employee-dashboard.html # Employee operations panel
-│   ├── manager-dashboard.html  # Manager analytics & controls
-│   ├── style.css               # Blue & white BEM design system
-│   └── app.js                  # Shared frontend utilities
-├── server.js                   # Express server + all API endpoints
-├── Dockerfile                  # Multi-stage Docker build
-├── .dockerignore               # Docker build exclusions
-├── package.json
-├── AI_USAGE_LOG.md             # AI transparency log
-└── .env                        # Environment variables (not committed)
+│   └── workflow.yml                # CI/CD pipeline
+├── designs/
+│   ├── Emerald_D1_Design.md        # C4 diagrams & design rationale
+│   └── diagrams/                   # C4 diagram images
+├── implementations/
+│   ├── lib/
+│   │   ├── crypto.js               # AES-256-CBC encrypt/decrypt helpers
+│   │   ├── auth.js                 # Role-based access control middleware
+│   │   └── expiry.js               # Background job: expire unpaid bookings
+│   ├── public/
+│   │   ├── index.html              # Welcome / landing page
+│   │   ├── login.html              # Sign in (role-based redirect)
+│   │   ├── register.html           # Create account page
+│   │   ├── dashboard.html          # Customer dashboard
+│   │   ├── profile.html            # User profile page
+│   │   ├── booking.html            # 3-step desk booking flow
+│   │   ├── my-bookings.html        # View / cancel bookings
+│   │   ├── employee-dashboard.html # Employee operations panel
+│   │   ├── manager-dashboard.html  # Manager analytics & controls
+│   │   ├── style.css               # Blue & white BEM design system
+│   │   └── app.js                  # Shared frontend utilities
+│   ├── tests/
+│   │   ├── helpers/mockSql.js      # Mock PostgreSQL for testing
+│   │   ├── unit/                   # Unit tests (crypto, auth, expiry)
+│   │   └── integration/            # Integration tests (routes)
+│   ├── server.js                   # Express server + all API endpoints
+│   ├── Dockerfile                  # Multi-stage Docker build
+│   ├── .dockerignore               # Docker build exclusions
+│   ├── .eslintrc.json              # ESLint configuration
+│   └── package.json
+├── Emerald_D3_AILog.md             # AI usage transparency log
+└── README.md                       # This file
 ```
 
 ## Getting Started
@@ -97,12 +108,13 @@ A full-featured co-working space management system with desk booking, membership
 
 2. **Install dependencies**
    ```bash
+   cd implementations
    npm install
    ```
 
 3. **Configure environment variables**
 
-   Create a `.env` file in the project root:
+   Create a `.env` file in the `implementations/` directory:
    ```
    DATABASE_URL=postgresql://user:password@ep-xxxx.region.aws.neon.tech/neondb?sslmode=require
    PORT=3000
@@ -132,6 +144,8 @@ A full-featured co-working space management system with desk booking, membership
 ### Run with Docker
 
 ```bash
+cd implementations
+
 # Build the image
 docker build -t 2025-itcs383-emerald .
 
@@ -140,6 +154,20 @@ docker run -p 3000:3000 \
   -e DATABASE_URL="your_neon_connection_string" \
   -e ENCRYPTION_KEY="your_64_char_hex_key" \
   2025-itcs383-emerald
+```
+
+### Run Tests
+
+```bash
+cd implementations
+npm test
+```
+
+### Run Linter
+
+```bash
+cd implementations
+npm run lint
 ```
 
 ## API Endpoints
@@ -205,14 +233,14 @@ After login, users are automatically redirected to their role-specific dashboard
 The full pipeline is defined in `.github/workflows/workflow.yml`:
 
 ```
-Push/PR to main → CI (lint + Docker build test)
+Push/PR to main → CI (ESLint + Jest tests + Docker build test)
 Merge to main   → CI + CD (build → push to GHCR → deploy to Render)
 ```
 
-| Trigger             | Jobs                                         |
-|---------------------|----------------------------------------------|
-| Push / PR to `main` | **CI** — Lint check + Docker image build test |
-| Push to `main` only | **CD** — Push image to GHCR + deploy to Render |
+| Trigger             | Jobs                                              |
+|---------------------|---------------------------------------------------|
+| Push / PR to `main` | **CI** — ESLint + Jest tests + Docker image build |
+| Push to `main` only | **CD** — Push image to GHCR + deploy to Render   |
 
 ### Required Secrets
 
