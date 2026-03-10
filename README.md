@@ -8,7 +8,7 @@ A full-featured co-working space management system with desk booking, membership
 
 ### Customer Features
 - Account Registration & Login — secure sign-up with encrypted PII storage
-- Desk Booking — 3-step flow: date selection, time slot picker with availability grid, payment
+- Desk Booking — date selection, time slot picker with availability grid
 - Multiple Payment Methods — Credit Card, Bank Transfer, TrueWallet (simulated)
 - My Bookings — view, track status, and cancel reservations (1-day-before policy)
 - Profile Management — view and update personal information
@@ -71,7 +71,8 @@ A full-featured co-working space management system with desk booking, membership
 │   │   ├── register.html           # Create account page
 │   │   ├── dashboard.html          # Customer dashboard
 │   │   ├── profile.html            # User profile page
-│   │   ├── booking.html            # 3-step desk booking flow
+│   │   ├── booking.html            # Desk booking flow
+│   │   ├── payment.html            # Unified payment page (mock)
 │   │   ├── my-bookings.html        # View / cancel bookings
 │   │   ├── employee-dashboard.html # Employee operations panel
 │   │   ├── manager-dashboard.html  # Manager analytics & controls
@@ -82,9 +83,11 @@ A full-featured co-working space management system with desk booking, membership
 │   │   ├── unit/                   # Unit tests (crypto, auth, expiry)
 │   │   └── integration/            # Integration tests (routes)
 │   ├── server.js                   # Express server + all API endpoints
+│   ├── server.test.js              # SonarQube integration tests
+│   ├── sonar-project.properties    # SonarQube configuration
 │   ├── Dockerfile                  # Multi-stage Docker build
 │   ├── .dockerignore               # Docker build exclusions
-│   ├── .eslintrc.json              # ESLint configuration
+│   ├── eslint.config.mjs           # ESLint flat configuration
 │   └── package.json
 ├── Emerald_D3_AILog.md             # AI usage transparency log
 └── README.md                       # This file
@@ -135,11 +138,15 @@ A full-featured co-working space management system with desk booking, membership
 
 > All database tables, indexes, seed data (50 desks, equipment inventory), and a default manager account are automatically created on first startup.
 
-### Default Manager Account
+### Default Accounts
 
-| Email              | Password   |
-|--------------------|------------|
-| `admin@spacehub.co`| `admin123` |
+A default **Manager** account is seeded on first startup:
+
+| Role    | Email              | Password   |
+|---------|--------------------|------------|
+| Manager | `admin@spacehub.co`| `admin123` |
+
+> **Employee** accounts are created by a Manager through the Manager Dashboard → Employees tab → "+ Add Employee".
 
 ### Run with Docker
 
@@ -179,19 +186,23 @@ npm run lint
 | POST   | `/api/login`     | Authenticate a user      |
 
 ### Membership
-| Method | Endpoint                        | Description                  |
-|--------|---------------------------------|------------------------------|
-| POST   | `/api/membership/purchase`      | Purchase a membership plan   |
-| GET    | `/api/membership/status/:userId`| Check membership status      |
+| Method | Endpoint                            | Description                          |
+|--------|-------------------------------------|--------------------------------------|
+| POST   | `/api/membership`                   | Create a membership (pending payment)|
+| POST   | `/api/membership/:membershipId/pay` | Pay for a pending membership         |
+| GET    | `/api/membership/:userId`           | Check membership status              |
+| GET    | `/api/pricing`                      | Get membership pricing               |
 
 ### Booking (Customer)
 | Method | Endpoint                            | Description                        |
 |--------|-------------------------------------|------------------------------------|
 | GET    | `/api/bookings/availability`        | Check desk availability by date    |
 | POST   | `/api/bookings`                     | Create a new booking               |
-| GET    | `/api/bookings/my/:userId`          | List user's bookings               |
+| GET    | `/api/bookings/user/:userId`        | List user's bookings               |
+| GET    | `/api/bookings/:bookingId`          | Get a single booking               |
 | POST   | `/api/bookings/:bookingId/pay`      | Pay for a pending booking          |
 | POST   | `/api/bookings/:bookingId/cancel`   | Cancel a booking (1-day policy)    |
+| GET    | `/api/timeslots`                    | Get available time slots           |
 
 ### Employee
 | Method | Endpoint                       | Description                    |
@@ -207,10 +218,12 @@ npm run lint
 ### Manager
 | Method | Endpoint                  | Description                        |
 |--------|---------------------------|------------------------------------|
+| GET    | `/api/manager/summary`    | Dashboard overview (today)         |
 | GET    | `/api/manager/revenue`    | Revenue summary (daily/monthly)    |
 | GET    | `/api/manager/report`     | Income report with expenses        |
 | GET    | `/api/manager/employees`  | List all employees                 |
 | POST   | `/api/manager/employees`  | Add a new employee                 |
+| PUT    | `/api/manager/employees/:id` | Update an employee              |
 | DELETE | `/api/manager/employees/:id` | Remove an employee              |
 
 ### Simulated External APIs
