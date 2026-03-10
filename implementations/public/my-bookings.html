@@ -108,7 +108,7 @@
                             ${b.status === 'pending' && b.expires_at ? `
                                 <div class="booking-card__expires">
                                     Payment due by ${new Date(b.expires_at).toLocaleTimeString()}
-                                    <a href="booking.html" class="btn-pay-link">Complete Payment</a>
+                                    <button class="btn-pay-link" onclick="goToBookingPayment(${b.id}, '${b.booking_date}', '${b.start_time}', '${b.end_time}', ${b.num_desks}, '${b.expires_at}')">Complete Payment</button>
                                 </div>
                             ` : ''}
                         </div>
@@ -132,6 +132,20 @@
             tomorrow.setDate(tomorrow.getDate() + 1);
             tomorrow.setHours(0, 0, 0, 0);
             return bookingDate >= tomorrow;
+        }
+
+        function goToBookingPayment(bookingId, bookingDate, startTime, endTime, numDesks, expiresAt) {
+            sessionStorage.setItem('pendingPayment', JSON.stringify({
+                type: 'booking',
+                id: bookingId,
+                date: bookingDate,
+                startTime: startTime,
+                endTime: endTime,
+                numDesks: numDesks,
+                amount: numDesks * 15,
+                expiresAt: expiresAt
+            }));
+            window.location.href = `payment.html?type=booking&id=${bookingId}`;
         }
 
         async function cancelBooking(bookingId) {

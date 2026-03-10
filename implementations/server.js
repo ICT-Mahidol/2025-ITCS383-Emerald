@@ -346,35 +346,83 @@ app.post('/api/membership', async (req, res) => {
 
     const existing = await sql`
       SELECT id FROM memberships
-      WHERE user_id = ${userId} AND status = 'active' AND end_date >= CURRENT_DATE
+      WHERE user_id = ${userId} AND (status = 'active' OR status = 'pending_payment') AND end_date >= CURRENT_DATE
     `;
     if (existing.length > 0) {
-      return res.status(409).json({ error: 'You already have an active membership.' });
+      return res.status(409).json({ error: 'You already have an active or pending membership.' });
     }
 
     const unitPrice = PRICING[type];
     const totalPrice = unitPrice * Number(duration);
 
     const membership = await sql`
-      INSERT INTO memberships (user_id, type, duration, price_paid, end_date)
-      VALUES (${userId}, ${type}, ${Number(duration)}, ${totalPrice},
+      INSERT INTO memberships (user_id, type, duration, price_paid, status, end_date)
+      VALUES (${userId}, ${type}, ${Number(duration)}, ${totalPrice}, 'pending_payment',
               CURRENT_DATE + ${type === 'day' ? sql`CAST(${Number(duration)} || ' days' AS INTERVAL)` :
         type === 'month' ? sql`CAST(${Number(duration)} || ' months' AS INTERVAL)` :
           sql`CAST(${Number(duration)} || ' years' AS INTERVAL)`})
       RETURNING *
     `;
 
-    await sql`
-      INSERT INTO payments (user_id, membership_id, amount, payment_type)
-      VALUES (${userId}, ${membership[0].id}, ${totalPrice}, 'subscription')
-    `;
-
     res.status(201).json({
-      message: 'Membership activated successfully!',
+      message: 'Membership created. Please complete payment.',
       membership: membership[0]
     });
   } catch (err) {
     console.error('Membership error:', err);
+    res.status(500).json({ error: 'Server error. Please try again.' });
+  }
+});
+
+// POST /api/membership/:membershipId/pay
+app.post('/api/membership/:membershipId/pay', async (req, res) => {
+  try {
+    const { membershipId } = req.params;
+    const { userId, paymentMethod } = req.body;
+
+    if (!userId || !paymentMethod) {
+      return res.status(400).json({ error: 'userId and paymentMethod are required.' });
+    }
+    if (!['credit_card', 'bank_transfer', 'truewallet'].includes(paymentMethod)) {
+      return res.status(400).json({ error: 'Invalid payment method.' });
+    }
+
+    const memberships = await sql`
+      SELECT * FROM memberships WHERE id = ${membershipId} AND user_id = ${userId}
+    `;
+    if (memberships.length === 0) {
+      return res.status(404).json({ error: 'Membership not found.' });
+    }
+    const membership = memberships[0];
+
+    if (membership.status !== 'pending_payment') {
+      return res.status(400).json({ error: 'Membership is not pending payment.' });
+    }
+
+    // Simulate bank transfer delay
+    if (paymentMethod === 'bank_transfer') {
+      await new Promise(resolve => setTimeout(resolve, 1500));
+    }
+
+    const amount = Number(membership.price_paid);
+
+    const payment = await sql`
+      INSERT INTO payments (user_id, membership_id, amount, payment_type, payment_method)
+      VALUES (${userId}, ${membershipId}, ${amount}, 'subscription', ${paymentMethod})
+      RETURNING *
+    `;
+
+    await sql`
+      UPDATE memberships SET status = 'active' WHERE id = ${membershipId}
+    `;
+
+    res.json({
+      message: 'Membership payment successful! Your membership is now active.',
+      membership: { ...membership, status: 'active' },
+      payment: payment[0]
+    });
+  } catch (err) {
+    console.error('Membership payment error:', err);
     res.status(500).json({ error: 'Server error. Please try again.' });
   }
 });
@@ -395,30 +443,6 @@ app.get('/api/membership/:userId', async (req, res) => {
     });
   } catch (err) {
     console.error('Get membership error:', err);
-    res.status(500).json({ error: 'Server error. Please try again.' });
-  }
-});
-
-// POST /api/payment
-app.post('/api/payment', async (req, res) => {
-  try {
-    const { userId, membershipId, bookingId, amount, paymentMethod } = req.body;
-    if (!userId || !amount) {
-      return res.status(400).json({ error: 'userId and amount are required.' });
-    }
-    if (Number(amount) <= 0) {
-      return res.status(400).json({ error: 'Amount must be greater than zero.' });
-    }
-
-    const payment = await sql`
-      INSERT INTO payments (user_id, membership_id, booking_id, amount, payment_type, payment_method)
-      VALUES (${userId}, ${membershipId || null}, ${bookingId || null}, ${Number(amount)}, 'deposit', ${paymentMethod || 'unspecified'})
-      RETURNING *
-    `;
-
-    res.status(201).json({ message: 'Payment recorded successfully!', payment: payment[0] });
-  } catch (err) {
-    console.error('Payment error:', err);
     res.status(500).json({ error: 'Server error. Please try again.' });
   }
 });
@@ -622,6 +646,23 @@ app.post('/api/bookings/:bookingId/cancel', async (req, res) => {
     res.json({ message: 'Booking cancelled successfully.', refundEligible: true });
   } catch (err) {
     console.error('Cancel booking error:', err);
+    res.status(500).json({ error: 'Server error.' });
+  }
+});
+
+// GET /api/bookings/:bookingId — fetch a single booking by ID
+app.get('/api/bookings/:bookingId', async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const bookings = await sql`
+      SELECT * FROM bookings WHERE id = ${bookingId}
+    `;
+    if (bookings.length === 0) {
+      return res.status(404).json({ error: 'Booking not found.' });
+    }
+    res.json({ booking: bookings[0] });
+  } catch (err) {
+    console.error('Get booking error:', err);
     res.status(500).json({ error: 'Server error.' });
   }
 });

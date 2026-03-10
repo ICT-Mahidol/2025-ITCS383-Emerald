@@ -111,19 +111,6 @@
                 <button class="btn-apply" id="applyBtn" onclick="handleApply()">Apply for Membership</button>
             </div>
 
-            <!-- Deposit Section (shown only when membership active) -->
-            <div class="deposit-section" id="depositSection" style="display:none;">
-                <h2 class="deposit-section__title">Make a Deposit</h2>
-                <p class="deposit-section__desc">Add funds to your account for co-working space usage.</p>
-                <div class="deposit-section__form">
-                    <div class="form-group">
-                        <label for="depositAmount">Amount (฿)</label>
-                        <input type="number" id="depositAmount" placeholder="Enter amount" min="1" step="0.01">
-                    </div>
-                    <button class="btn-apply" onclick="handleDeposit()">Make Deposit</button>
-                </div>
-            </div>
-
             <!-- Payment History -->
             <div class="payment-history" id="paymentHistory" style="display:none;">
                 <h2 class="payment-history__title">Payment History</h2>
@@ -164,11 +151,11 @@
                     currentMembership = data.membership;
                     const isActive = data.membership.status === 'active' &&
                         new Date(data.membership.end_date) >= new Date();
-                    renderMembershipStatus(data.membership, isActive);
+                    const isPending = data.membership.status === 'pending_payment';
+                    renderMembershipStatus(data.membership, isActive, isPending);
 
-                    if (isActive) {
+                    if (isActive || isPending) {
                         document.getElementById('applySection').style.display = 'none';
-                        document.getElementById('depositSection').style.display = 'block';
                     }
                 }
 
@@ -181,11 +168,14 @@
         }
 
         // ── Render membership status ──
-        function renderMembershipStatus(membership, isActive) {
+        function renderMembershipStatus(membership, isActive, isPending) {
             const badge = document.getElementById('statusBadge');
             const details = document.getElementById('membershipDetails');
 
-            if (isActive) {
+            if (isPending) {
+                badge.textContent = 'Pending Payment';
+                badge.className = 'membership-status__badge membership-status__badge--pending';
+            } else if (isActive) {
                 badge.textContent = 'Active';
                 badge.className = 'membership-status__badge membership-status__badge--active';
             } else {
@@ -216,10 +206,11 @@
                         <span class="membership-status__item-value">${endDate}</span>
                     </div>
                     <div class="membership-status__item">
-                        <span class="membership-status__item-label">Price Paid</span>
+                        <span class="membership-status__item-label">${isPending ? 'Amount Due' : 'Price Paid'}</span>
                         <span class="membership-status__item-value">฿${Number(membership.price_paid).toLocaleString()}</span>
                     </div>
                 </div>
+                ${isPending ? `<button class="btn-apply" style="margin-top:16px;width:100%;" onclick="goToMembershipPayment(${membership.id}, '${membership.type}', ${membership.duration}, ${Number(membership.price_paid)})">Complete Payment</button>` : ''}
             `;
         }
 
@@ -232,7 +223,7 @@
             list.innerHTML = payments.map(p => `
                 <div class="payment-item">
                     <div class="payment-item__info">
-                        <span class="payment-item__type">${p.payment_type === 'subscription' ? '💳 Subscription' : '💰 Deposit'}</span>
+                        <span class="payment-item__type">${p.payment_type === 'subscription' ? '💳 Subscription' : '💳 Payment'}</span>
                         <span class="payment-item__date">${new Date(p.created_at).toLocaleDateString()}</span>
                     </div>
                     <span class="payment-item__amount">฿${Number(p.amount).toLocaleString()}</span>
@@ -301,8 +292,21 @@
                     return;
                 }
 
-                showToast('Membership activated! 🎉', 'success');
-                setTimeout(() => location.reload(), 1000);
+                // Store payment data in sessionStorage for the payment page
+                const unitLabels = { day: 'day(s)', month: 'month(s)', year: 'year(s)' };
+                sessionStorage.setItem('pendingPayment', JSON.stringify({
+                    type: 'membership',
+                    id: data.membership.id,
+                    membershipType: selectedType,
+                    duration: duration,
+                    durationLabel: `${duration} ${unitLabels[selectedType]}`,
+                    amount: totalPrice
+                }));
+
+                showToast('Redirecting to payment...', 'success');
+                setTimeout(() => {
+                    window.location.href = `payment.html?type=membership&id=${data.membership.id}`;
+                }, 800);
             } catch (err) {
                 showToast('Connection error. Please try again.', 'error');
                 btn.classList.remove('loading');
@@ -310,38 +314,17 @@
             }
         }
 
-        // ── Deposit ──
-        async function handleDeposit() {
-            const amount = parseFloat(document.getElementById('depositAmount').value);
-            if (!amount || amount <= 0) {
-                showToast('Please enter a valid amount.', 'error');
-                return;
-            }
-
-            try {
-                const res = await fetch('/api/payment', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        userId: currentUser.id,
-                        membershipId: currentMembership ? currentMembership.id : null,
-                        amount
-                    })
-                });
-
-                const data = await res.json();
-
-                if (!res.ok) {
-                    showToast(data.error, 'error');
-                    return;
-                }
-
-                showToast(`Deposit of ฿${amount.toLocaleString()} recorded!`, 'success');
-                document.getElementById('depositAmount').value = '';
-                setTimeout(() => location.reload(), 1000);
-            } catch (err) {
-                showToast('Connection error. Please try again.', 'error');
-            }
+        function goToMembershipPayment(membershipId, type, duration, amount) {
+            const unitLabels = { day: 'day(s)', month: 'month(s)', year: 'year(s)' };
+            sessionStorage.setItem('pendingPayment', JSON.stringify({
+                type: 'membership',
+                id: membershipId,
+                membershipType: type,
+                duration: duration,
+                durationLabel: `${duration} ${unitLabels[type]}`,
+                amount: amount
+            }));
+            window.location.href = `payment.html?type=membership&id=${membershipId}`;
         }
 
         // handleLogout, toggleProfileMenu, and click-outside are in app.js

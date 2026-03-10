@@ -66,83 +66,6 @@
                 <div class="slot-grid" id="slotGrid"></div>
                 <button class="btn-apply" onclick="createBooking()" id="bookBtn" style="margin-top:20px;" disabled>Book Selected Slot</button>
             </div>
-
-            <!-- Step 3: Payment -->
-            <div class="booking-section" id="paymentSection" style="display:none;">
-                <h2 class="booking-section__title">3. Complete Payment</h2>
-                <div class="payment-countdown" id="countdown"></div>
-                <div class="price-summary" style="margin-bottom:24px;">
-                    <div class="price-summary__row">
-                        <span>Desks</span>
-                        <span id="payDesks">1</span>
-                    </div>
-                    <div class="price-summary__row">
-                        <span>Rate per desk</span>
-                        <span>฿15</span>
-                    </div>
-                    <div class="price-summary__row price-summary__total">
-                        <span>Total</span>
-                        <span id="payTotal">฿15</span>
-                    </div>
-                </div>
-
-                <!-- Payment Tabs -->
-                <div class="payment-tabs">
-                    <button class="payment-tab active" data-method="credit_card" onclick="selectPaymentTab('credit_card')">Credit Card</button>
-                    <button class="payment-tab" data-method="bank_transfer" onclick="selectPaymentTab('bank_transfer')">Bank Transfer</button>
-                    <button class="payment-tab" data-method="truewallet" onclick="selectPaymentTab('truewallet')">TrueWallet</button>
-                </div>
-
-                <!-- Credit Card Form -->
-                <div class="payment-form" id="form_credit_card">
-                    <div class="form-group">
-                        <label>Card Number</label>
-                        <input type="text" id="cardNumber" placeholder="4242 4242 4242 4242" maxlength="19">
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Expiry</label>
-                            <input type="text" id="cardExpiry" placeholder="MM/YY" maxlength="5">
-                        </div>
-                        <div class="form-group">
-                            <label>CVV</label>
-                            <input type="text" id="cardCvv" placeholder="123" maxlength="4">
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label>Cardholder Name</label>
-                        <input type="text" id="cardName" placeholder="John Doe">
-                    </div>
-                </div>
-
-                <!-- Bank Transfer Form -->
-                <div class="payment-form" id="form_bank_transfer" style="display:none;">
-                    <div class="bank-info">
-                        <p><strong>Bank:</strong> Bangkok Bank</p>
-                        <p><strong>Account:</strong> 123-456-7890</p>
-                        <p><strong>Name:</strong> SpaceHub Co., Ltd.</p>
-                    </div>
-                    <div class="form-group">
-                        <label>Transfer Reference Number</label>
-                        <input type="text" id="bankRef" placeholder="Enter your transfer reference">
-                    </div>
-                </div>
-
-                <!-- TrueWallet Form -->
-                <div class="payment-form" id="form_truewallet" style="display:none;">
-                    <div class="form-group">
-                        <label>TrueWallet Phone Number</label>
-                        <input type="tel" id="walletPhone" placeholder="08X-XXX-XXXX">
-                    </div>
-                    <div class="form-group">
-                        <label>OTP Code</label>
-                        <input type="text" id="walletOtp" placeholder="Enter 6-digit OTP" maxlength="6">
-                    </div>
-                    <p class="payment-note">A simulated OTP has been sent to your phone. Enter any 6 digits.</p>
-                </div>
-
-                <button class="btn-apply" onclick="submitPayment()" id="payBtn">Pay Now</button>
-            </div>
         </div>
     </div>
 
@@ -160,9 +83,6 @@
         }
 
         let selectedSlot = null;
-        let currentBooking = null;
-        let countdownInterval = null;
-        let selectedPayment = 'credit_card';
 
         function changeDesks(delta) {
             const input = document.getElementById('numDesks');
@@ -239,78 +159,27 @@
 
                 if (!res.ok) { showToast(data.error, 'error'); btn.textContent = 'Book Selected Slot'; btn.classList.remove('loading'); return; }
 
-                currentBooking = data.booking;
-                showToast(data.message, 'success');
+                // Store payment data in sessionStorage for the payment page
+                const bookingDate = document.getElementById('bookingDate').value;
+                const numDesksVal = parseInt(document.getElementById('numDesks').value);
+                sessionStorage.setItem('pendingPayment', JSON.stringify({
+                    type: 'booking',
+                    id: data.booking.id,
+                    date: bookingDate,
+                    startTime: selectedSlot.startTime,
+                    endTime: selectedSlot.endTime,
+                    numDesks: numDesksVal,
+                    amount: numDesksVal * 15,
+                    expiresAt: data.booking.expires_at
+                }));
 
-                // Show payment section
-                const numDesks = currentBooking.num_desks;
-                document.getElementById('payDesks').textContent = numDesks;
-                document.getElementById('payTotal').textContent = formatCurrency(numDesks * 15);
-                document.getElementById('paymentSection').style.display = 'block';
-
-                // Start countdown
-                startCountdown(new Date(currentBooking.expires_at));
-
-                // Hide booking steps
-                document.getElementById('slotSection').querySelector('.btn-apply').style.display = 'none';
+                showToast('Booking created! Redirecting to payment...', 'success');
+                setTimeout(() => {
+                    window.location.href = `payment.html?type=booking&id=${data.booking.id}`;
+                }, 800);
             } catch (err) {
                 showToast('Connection error.', 'error');
-            }
-            btn.textContent = 'Book Selected Slot';
-            btn.classList.remove('loading');
-        }
-
-        function startCountdown(expiresAt) {
-            const el = document.getElementById('countdown');
-            if (countdownInterval) clearInterval(countdownInterval);
-
-            countdownInterval = setInterval(() => {
-                const remaining = expiresAt - new Date();
-                if (remaining <= 0) {
-                    clearInterval(countdownInterval);
-                    el.innerHTML = '<span class="countdown--expired">Booking expired!</span>';
-                    document.getElementById('payBtn').disabled = true;
-                    return;
-                }
-                const mins = Math.floor(remaining / 60000);
-                const secs = Math.floor((remaining % 60000) / 1000);
-                el.innerHTML = `<span class="countdown--active">Time remaining: ${mins}:${secs.toString().padStart(2, '0')}</span>`;
-            }, 1000);
-        }
-
-        function selectPaymentTab(method) {
-            selectedPayment = method;
-            document.querySelectorAll('.payment-tab').forEach(t => t.classList.toggle('active', t.dataset.method === method));
-            document.querySelectorAll('.payment-form').forEach(f => f.style.display = 'none');
-            document.getElementById('form_' + method).style.display = 'block';
-        }
-
-        async function submitPayment() {
-            if (!currentBooking) { showToast('No booking to pay for.', 'error'); return; }
-
-            const btn = document.getElementById('payBtn');
-            btn.textContent = 'Processing...';
-            btn.classList.add('loading');
-
-            try {
-                const res = await fetch(`/api/bookings/${currentBooking.id}/pay`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        userId: currentUser.id,
-                        paymentMethod: selectedPayment
-                    })
-                });
-                const data = await res.json();
-
-                if (!res.ok) { showToast(data.error, 'error'); btn.textContent = 'Pay Now'; btn.classList.remove('loading'); return; }
-
-                clearInterval(countdownInterval);
-                showToast('Payment successful! Booking confirmed.', 'success');
-                setTimeout(() => { window.location.href = 'my-bookings.html'; }, 1500);
-            } catch (err) {
-                showToast('Payment failed. Please try again.', 'error');
-                btn.textContent = 'Pay Now';
+                btn.textContent = 'Book Selected Slot';
                 btn.classList.remove('loading');
             }
         }
