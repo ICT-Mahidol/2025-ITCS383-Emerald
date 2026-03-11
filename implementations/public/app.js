@@ -7,8 +7,8 @@ function showToast(message, type = 'success') {
     if (!toast) return;
     toast.className = `toast toast--${type} show`;
     toast.innerHTML = `${type === 'success' ? '✓' : '✕'} ${message}`;
-    clearTimeout(window.__toastTimer);
-    window.__toastTimer = setTimeout(() => {
+    clearTimeout(globalThis.__toastTimer);
+    globalThis.__toastTimer = setTimeout(() => {
         toast.classList.remove('show');
     }, 3500);
 }
@@ -16,12 +16,12 @@ function showToast(message, type = 'success') {
 function requireAuth(allowedRoles) {
     const userData = sessionStorage.getItem('user');
     if (!userData) {
-        window.location.href = 'login.html';
+        globalThis.location.href = 'login.html';
         return null;
     }
     const user = JSON.parse(userData);
     if (allowedRoles && !allowedRoles.includes(user.role || 'customer')) {
-        window.location.href = 'login.html';
+        globalThis.location.href = 'login.html';
         return null;
     }
     return user;
@@ -29,7 +29,7 @@ function requireAuth(allowedRoles) {
 
 function handleLogout() {
     sessionStorage.removeItem('user');
-    window.location.href = 'index.html';
+    globalThis.location.href = 'index.html';
 }
 
 function toggleProfileMenu() {
@@ -50,5 +50,6 @@ function formatCurrency(amount) {
 }
 
 function formatDate(dateStr) {
-    return new Date(dateStr).toLocaleDateString();
+    if (!dateStr) return '-';
+    return new Date(dateStr).toLocaleDateString('en-GB', { timeZone: 'Asia/Bangkok' });
 }

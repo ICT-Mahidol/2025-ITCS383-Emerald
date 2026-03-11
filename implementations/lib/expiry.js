@@ -6,7 +6,7 @@ function startExpiryJob(sql) {
         SET status = 'expired'
         WHERE status = 'pending'
           AND expires_at IS NOT NULL
-          AND expires_at < NOW()
+          AND expires_at < (NOW() AT TIME ZONE 'Asia/Bangkok')
         RETURNING id
       `;
       if (expired.length > 0) {

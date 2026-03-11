@@ -129,11 +129,14 @@
 
         function canCancelBooking(booking) {
             if (booking.status !== 'confirmed' && booking.status !== 'pending') return false;
+
+            const bkkDateString = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok' }).format(new Date());
+            const todayBkk = new Date(bkkDateString);
+            const tomorrowBkk = new Date(todayBkk);
+            tomorrowBkk.setDate(tomorrowBkk.getDate() + 1);
+
             const bookingDate = new Date(booking.booking_date);
-            const tomorrow = new Date();
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            tomorrow.setHours(0, 0, 0, 0);
-            return bookingDate >= tomorrow;
+            return bookingDate >= tomorrowBkk;
         }
 
         function goToBookingPayment(bookingId, bookingDate, startTime, endTime, numDesks, expiresAt) {

@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const postgres = require('postgres');
 const bcrypt = require('bcryptjs');
-const path = require('path');
+const path = require('node:path');
 const { encrypt, decrypt } = require('./lib/crypto');
 const { requireRole } = require('./lib/auth');
 const { startExpiryJob } = require('./lib/expiry');
@@ -91,7 +91,7 @@ async function initDB() {
         type VARCHAR(20) NOT NULL,
         duration INTEGER NOT NULL DEFAULT 1,
         price_paid DECIMAL(10,2) NOT NULL,
-        start_date DATE NOT NULL DEFAULT CURRENT_DATE,
+        start_date DATE NOT NULL DEFAULT (NOW() AT TIME ZONE 'Asia/Bangkok')::date,
         end_date DATE NOT NULL,
         status VARCHAR(20) NOT NULL DEFAULT 'active',
         created_at TIMESTAMP DEFAULT NOW()
@@ -183,7 +183,7 @@ async function initDB() {
         category VARCHAR(50) NOT NULL,
         description TEXT,
         amount DECIMAL(10,2) NOT NULL,
-        expense_date DATE NOT NULL DEFAULT CURRENT_DATE,
+        expense_date DATE NOT NULL DEFAULT (NOW() AT TIME ZONE 'Asia/Bangkok')::date,
         created_at TIMESTAMP DEFAULT NOW()
       )
     `;
@@ -547,11 +547,13 @@ app.post('/api/bookings', async (req, res) => {
       return res.status(400).json({ error: `Not enough desks available. Only ${availableDesks.length} desk(s) free.` });
     }
 
-    const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+    // Set expires_at to 30 minutes from now in BKK time
+    const expiryResult = await sql`SELECT (NOW() AT TIME ZONE 'Asia/Bangkok') + interval '30 minutes' as expiry`;
+    const expiresAtBkk = expiryResult[0].expiry;
 
     const booking = await sql`
       INSERT INTO bookings (user_id, booking_date, start_time, end_time, num_desks, status, expires_at)
-      VALUES (${userId}, ${date}, ${startTime}::time, ${endTime}::time, ${Number(numDesks)}, 'pending', ${expiresAt})
+      VALUES (${userId}, ${date}, ${startTime}::time, ${endTime}::time, ${Number(numDesks)}, 'pending', ${expiresAtBkk})
       RETURNING *
     `;
 
@@ -561,7 +563,7 @@ app.post('/api/bookings', async (req, res) => {
 
     res.status(201).json({
       message: 'Booking created! Please complete payment within 30 minutes.',
-      booking: { ...booking[0], expires_at: expiresAt.toISOString(), desks: availableDesks.map(d => d.label) }
+      booking: { ...booking[0], expires_at: expiresAtBkk, desks: availableDesks.map(d => d.label) }
     });
   } catch (err) {
     console.error('Booking error:', err);
@@ -641,9 +643,7 @@ app.get('/api/bookings/user/:userId', async (req, res) => {
     `;
     const result = bookings.map(b => ({
       ...b,
-      expires_at: b.expires_at
-        ? new Date(typeof b.expires_at === 'string' && !b.expires_at.includes('Z') ? b.expires_at + 'Z' : b.expires_at).toISOString()
-        : null
+      expires_at: b.expires_at ? new Date(typeof b.expires_at === 'string' && !b.expires_at.includes('Z') ? b.expires_at + 'Z' : b.expires_at).toISOString() : null
     }));
     res.json({ bookings: result });
   } catch (err) {
@@ -666,12 +666,13 @@ app.post('/api/bookings/:bookingId/cancel', async (req, res) => {
       return res.status(400).json({ error: `Booking is already ${booking.status}.` });
     }
 
-    const bookingDate = new Date(booking.booking_date);
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(0, 0, 0, 0);
+    const getBkkToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok' }).format(new Date());
+    const tomorrowBkk = new Date(getBkkToday());
+    tomorrowBkk.setDate(tomorrowBkk.getDate() + 1);
 
-    if (bookingDate < tomorrow) {
+    const bookingDate = new Date(booking.booking_date);
+
+    if (bookingDate < tomorrowBkk) {
       return res.status(400).json({ error: 'Cannot cancel less than 1 day before the reservation. No refund available.' });
     }
 
@@ -807,7 +808,8 @@ app.post('/api/employee/expenses', requireRole(getSql, 'employee', 'manager'), a
 app.get('/api/employee/expenses', requireRole(getSql, 'employee', 'manager'), async (req, res) => {
   try {
     const { date } = req.query;
-    const whereDate = date || new Date().toISOString().split('T')[0];
+    const getBkkToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok' }).format(new Date());
+    const whereDate = date || getBkkToday();
     const expenses = await sql`
       SELECT e.*, u.first_name, u.last_name
       FROM expenses e JOIN users u ON u.id = e.recorded_by
@@ -849,21 +851,21 @@ app.get('/api/manager/revenue', requireRole(getSql, 'manager'), async (req, res)
     if (period === 'day' && date) {
       const breakdown = await sql`
         SELECT payment_type, payment_method, SUM(amount) as total, COUNT(*) as count
-        FROM payments WHERE created_at::date = ${date} GROUP BY payment_type, payment_method
+        FROM payments WHERE (created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Bangkok')::date = ${date} GROUP BY payment_type, payment_method
       `;
       const totalRow = await sql`
         SELECT COALESCE(SUM(amount), 0) as total_revenue, COUNT(*) as payment_count
-        FROM payments WHERE created_at::date = ${date}
+        FROM payments WHERE (created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Bangkok')::date = ${date}
       `;
       res.json({ period: 'day', date, ...totalRow[0], breakdown });
     } else if (period === 'month' && month) {
       const breakdown = await sql`
         SELECT payment_type, payment_method, SUM(amount) as total, COUNT(*) as count
-        FROM payments WHERE to_char(created_at, 'YYYY-MM') = ${month} GROUP BY payment_type, payment_method
+        FROM payments WHERE to_char(created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Bangkok', 'YYYY-MM') = ${month} GROUP BY payment_type, payment_method
       `;
       const totalRow = await sql`
         SELECT COALESCE(SUM(amount), 0) as total_revenue, COUNT(*) as payment_count
-        FROM payments WHERE to_char(created_at, 'YYYY-MM') = ${month}
+        FROM payments WHERE to_char(created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Bangkok', 'YYYY-MM') = ${month}
       `;
       res.json({ period: 'month', month, ...totalRow[0], breakdown });
     } else {
@@ -881,11 +883,11 @@ app.get('/api/manager/report', requireRole(getSql, 'manager'), async (req, res) 
     const { month } = req.query;
     if (!month) return res.status(400).json({ error: 'Month (YYYY-MM) is required.' });
 
-    const revenue = await sql`SELECT COALESCE(SUM(amount), 0) as total_revenue FROM payments WHERE to_char(created_at, 'YYYY-MM') = ${month}`;
+    const revenue = await sql`SELECT COALESCE(SUM(amount), 0) as total_revenue FROM payments WHERE to_char(created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Bangkok', 'YYYY-MM') = ${month}`;
     const expenseTotal = await sql`SELECT COALESCE(SUM(amount), 0) as total_expenses FROM expenses WHERE to_char(expense_date, 'YYYY-MM') = ${month}`;
     const dailyRevenue = await sql`
-      SELECT created_at::date as date, SUM(amount) as revenue, COUNT(*) as payments
-      FROM payments WHERE to_char(created_at, 'YYYY-MM') = ${month} GROUP BY created_at::date ORDER BY date
+      SELECT (created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Bangkok')::date as date, SUM(amount) as revenue, COUNT(*) as payments
+      FROM payments WHERE to_char(created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Bangkok', 'YYYY-MM') = ${month} GROUP BY (created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Bangkok')::date ORDER BY date
     `;
     const dailyExpenses = await sql`
       SELECT expense_date as date, SUM(amount) as expenses
@@ -991,10 +993,11 @@ app.delete('/api/manager/employees/:employeeId', requireRole(getSql, 'manager'),
 app.get('/api/manager/summary', requireRole(getSql, 'manager'), async (req, res) => {
   try {
     const { date } = req.query;
-    const targetDate = date || new Date().toISOString().split('T')[0];
+    const getBkkToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok' }).format(new Date());
+    const targetDate = date || getBkkToday();
 
     const bookingCount = await sql`SELECT COUNT(*) as count FROM bookings WHERE booking_date = ${targetDate} AND status IN ('confirmed', 'checked_in')`;
-    const income = await sql`SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE created_at::date = ${targetDate}`;
+    const income = await sql`SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE (created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Bangkok')::date = ${targetDate}`;
     const expenseTotal = await sql`SELECT COALESCE(SUM(amount), 0) as total FROM expenses WHERE expense_date = ${targetDate}`;
     const memberCount = await sql`SELECT COUNT(*) as count FROM users WHERE role = 'customer'`;
 
