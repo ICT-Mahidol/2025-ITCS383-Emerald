@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="SpaceHub Manager Dashboard — revenue, reports, and employee management.">
+    <title>Manager Dashboard — SpaceHub</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="dashboard">
+        <nav class="dashboard__nav">
+            <a href="index.html" class="dashboard__nav-logo">
+                <div class="navbar__logo-icon" style="width:32px;height:32px;font-size:0.9rem;">⬡</div>
+                SpaceHub
+            </a>
+            <div class="dashboard__nav-links">
+                <span class="nav-role-badge nav-role-badge--manager">Manager Portal</span>
+            </div>
+            <div class="profile-menu">
+                <button class="profile-menu__avatar" onclick="toggleProfileMenu()">
+                    <span id="avatarInitial">M</span>
+                </button>
+                <div class="profile-menu__dropdown" id="profileDropdown">
+                    <a href="employee-dashboard.html" class="profile-menu__item">
+                        <span class="profile-menu__item-icon">👷</span> Employee View
+                    </a>
+                    <button class="profile-menu__item profile-menu__item--danger" onclick="handleLogout()">
+                        <span class="profile-menu__item-icon">🚪</span> Sign Out
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <div class="dashboard__content">
+            <!-- Overview Cards -->
+            <div class="revenue-cards" id="overviewCards">
+                <div class="revenue-card">
+                    <div class="revenue-card__label">Today's Revenue</div>
+                    <div class="revenue-card__value" id="todayRevenue">฿0</div>
+                </div>
+                <div class="revenue-card">
+                    <div class="revenue-card__label">This Month</div>
+                    <div class="revenue-card__value" id="monthRevenue">฿0</div>
+                </div>
+                <div class="revenue-card">
+                    <div class="revenue-card__label">Bookings Today</div>
+                    <div class="revenue-card__value" id="todayBookings">0</div>
+                </div>
+                <div class="revenue-card">
+                    <div class="revenue-card__label">Total Members</div>
+                    <div class="revenue-card__value" id="totalMembers">0</div>
+                </div>
+            </div>
+
+            <!-- Tab Navigation -->
+            <div class="tab-nav">
+                <button class="tab-nav__item tab-nav__item--active" onclick="switchTab('revenue')">Revenue</button>
+                <button class="tab-nav__item" onclick="switchTab('report')">Income Report</button>
+                <button class="tab-nav__item" onclick="switchTab('employees')">Employees</button>
+            </div>
+
+            <!-- Revenue Tab -->
+            <div class="tab-content" id="tab_revenue">
+                <div class="booking-section">
+                    <h2 class="booking-section__title">Revenue Details</h2>
+                    <div class="form-row" style="max-width:500px;">
+                        <div class="form-group">
+                            <label for="revPeriod">Period</label>
+                            <select id="revPeriod" onchange="toggleRevInputs()" style="width:100%;padding:12px 16px;border:1.5px solid var(--gray-200);border-radius:10px;font-size:0.92rem;font-family:'Inter',sans-serif;background:var(--white);">
+                                <option value="day">Daily</option>
+                                <option value="month">Monthly</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="revDateGroup">
+                            <label for="revDate">Date</label>
+                            <input type="date" id="revDate">
+                        </div>
+                        <div class="form-group" id="revMonthGroup" style="display:none;">
+                            <label for="revMonth">Month</label>
+                            <input type="month" id="revMonth">
+                        </div>
+                    </div>
+                    <button class="btn-apply" onclick="loadRevenue()" style="max-width:200px;">View Revenue</button>
+                    <div id="revenueResult" style="margin-top:24px;"></div>
+                </div>
+            </div>
+
+            <!-- Report Tab -->
+            <div class="tab-content" id="tab_report" style="display:none;">
+                <div class="booking-section">
+                    <h2 class="booking-section__title">Monthly Income Report</h2>
+                    <div class="form-group" style="max-width:250px;">
+                        <label for="reportMonth">Select Month</label>
+                        <input type="month" id="reportMonth">
+                    </div>
+                    <button class="btn-apply" onclick="loadReport()" style="max-width:200px;">Generate Report</button>
+                    <div id="reportResult" style="margin-top:24px;"></div>
+                </div>
+            </div>
+
+            <!-- Employees Tab -->
+            <div class="tab-content" id="tab_employees" style="display:none;">
+                <div class="booking-section">
+                    <h2 class="booking-section__title">Employee Management</h2>
+
+                    <!-- Add Employee Form -->
+                    <div class="add-employee-form" id="addEmployeeForm" style="display:none;">
+                        <h3 style="margin-bottom:16px;color:var(--gray-800);">Add New Employee</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="empFirstName">First Name</label>
+                                <input type="text" id="empFirstName" placeholder="John">
+                            </div>
+                            <div class="form-group">
+                                <label for="empLastName">Last Name</label>
+                                <input type="text" id="empLastName" placeholder="Doe">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="empEmail">Email</label>
+                            <input type="email" id="empEmail" placeholder="employee@spacehub.co">
+                        </div>
+                        <div class="form-group">
+                            <label for="empPhone">Phone</label>
+                            <input type="tel" id="empPhone" placeholder="+66 81 234 5678">
+                        </div>
+                        <div class="form-group">
+                            <label for="empAddress">Address</label>
+                            <input type="text" id="empAddress" placeholder="Address">
+                        </div>
+                        <div class="form-group">
+                            <label for="empPassword">Password</label>
+                            <input type="password" id="empPassword" placeholder="Min 6 characters" minlength="6">
+                        </div>
+                        <div style="display:flex;gap:12px;">
+                            <button class="btn-apply" onclick="createEmployee()" style="flex:1;">Create Employee</button>
+                            <button class="btn-cancel" onclick="document.getElementById('addEmployeeForm').style.display='none'" style="flex:0 0 auto;">Cancel</button>
+                        </div>
+                    </div>
+
+                    <button class="btn-apply" onclick="document.getElementById('addEmployeeForm').style.display='block'" style="max-width:250px;margin-bottom:24px;" id="showAddBtn">+ Add Employee</button>
+
+                    <div id="employeesList" class="data-table-container">
+                        <p class="loading-text">Loading employees...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script src="app.js"></script>
+    <script>
+        const currentUser = requireAuth(['manager']);
+        if (currentUser) {
+            document.getElementById('avatarInitial').textContent = currentUser.firstName.charAt(0).toUpperCase();
+            const today = new Date().toISOString().split('T')[0];
+            const month = today.substring(0, 7);
+            document.getElementById('revDate').value = today;
+            document.getElementById('revMonth').value = month;
+            document.getElementById('reportMonth').value = month;
+            loadOverview();
+            loadEmployees();
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
+            document.querySelectorAll('.tab-nav__item').forEach(t => t.classList.remove('tab-nav__item--active'));
+            document.getElementById('tab_' + tab).style.display = 'block';
+            event.target.classList.add('tab-nav__item--active');
+        }
+
+        function toggleRevInputs() {
+            const period = document.getElementById('revPeriod').value;
+            document.getElementById('revDateGroup').style.display = period === 'day' ? 'block' : 'none';
+            document.getElementById('revMonthGroup').style.display = period === 'month' ? 'block' : 'none';
+        }
+
+        async function loadOverview() {
+            try {
+                const res = await fetch(`/api/manager/summary?userId=${currentUser.id}`);
+                const data = await res.json();
+                document.getElementById('todayRevenue').textContent = formatCurrency(data.totalIncome);
+                document.getElementById('todayBookings').textContent = data.reservationCount;
+                document.getElementById('totalMembers').textContent = data.totalMembers;
+
+                const month = new Date().toISOString().substring(0, 7);
+                const monthRes = await fetch(`/api/manager/revenue?period=month&month=${month}&userId=${currentUser.id}`);
+                const monthData = await monthRes.json();
+                document.getElementById('monthRevenue').textContent = formatCurrency(monthData.total_revenue);
+            } catch (err) {
+                console.error('Overview error:', err);
+            }
+        }
+
+        async function loadRevenue() {
+            const period = document.getElementById('revPeriod').value;
+            let url;
+            if (period === 'day') {
+                const date = document.getElementById('revDate').value;
+                url = `/api/manager/revenue?period=day&date=${date}&userId=${currentUser.id}`;
+            } else {
+                const month = document.getElementById('revMonth').value;
+                url = `/api/manager/revenue?period=month&month=${month}&userId=${currentUser.id}`;
+            }
+
+            try {
+                const res = await fetch(url);
+                const data = await res.json();
+                const container = document.getElementById('revenueResult');
+
+                container.innerHTML = `
+                    <div class="revenue-summary">
+                        <div class="revenue-summary__total">
+                            <span>Total Revenue</span>
+                            <strong>${formatCurrency(data.total_revenue)}</strong>
+                        </div>
+                        <div class="revenue-summary__count">
+                            <span>Payments</span>
+                            <strong>${data.payment_count}</strong>
+                        </div>
+                    </div>
+                    ${data.breakdown && data.breakdown.length > 0 ? `
+                        <table class="data-table" style="margin-top:16px;">
+                            <thead><tr><th>Type</th><th>Method</th><th>Total</th><th>Count</th></tr></thead>
+                            <tbody>
+                                ${data.breakdown.map(b => `
+                                    <tr>
+                                        <td>${b.payment_type}</td>
+                                        <td>${b.payment_method || '-'}</td>
+                                        <td>${formatCurrency(b.total)}</td>
+                                        <td>${b.count}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    ` : '<p class="empty-text" style="margin-top:12px;">No revenue data for this period.</p>'}
+                `;
+            } catch (err) {
+                showToast('Failed to load revenue.', 'error');
+            }
+        }
+
+        async function loadReport() {
+            const month = document.getElementById('reportMonth').value;
+            if (!month) { showToast('Select a month.', 'error'); return; }
+
+            try {
+                const res = await fetch(`/api/manager/report?month=${month}&userId=${currentUser.id}`);
+                const data = await res.json();
+                const container = document.getElementById('reportResult');
+
+                container.innerHTML = `
+                    <div class="report-overview">
+                        <div class="report-card report-card--income">
+                            <div class="report-card__label">Total Revenue</div>
+                            <div class="report-card__value">${formatCurrency(data.totalRevenue)}</div>
+                        </div>
+                        <div class="report-card report-card--expense">
+                            <div class="report-card__label">Total Expenses</div>
+                            <div class="report-card__value">${formatCurrency(data.totalExpenses)}</div>
+                        </div>
+                        <div class="report-card report-card--net">
+                            <div class="report-card__label">Net Income</div>
+                            <div class="report-card__value">${formatCurrency(data.netIncome)}</div>
+                        </div>
+                    </div>
+
+                    ${data.dailyRevenue && data.dailyRevenue.length > 0 ? `
+                        <h3 style="margin:24px 0 12px;color:var(--gray-800);">Daily Revenue Breakdown</h3>
+                        <table class="data-table">
+                            <thead><tr><th>Date</th><th>Revenue</th><th>Payments</th></tr></thead>
+                            <tbody>
+                                ${data.dailyRevenue.map(d => `
+                                    <tr>
+                                        <td>${formatDate(d.date)}</td>
+                                        <td>${formatCurrency(d.revenue)}</td>
+                                        <td>${d.payments}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    ` : ''}
+
+                    ${data.dailyBookings && data.dailyBookings.length > 0 ? `
+                        <h3 style="margin:24px 0 12px;color:var(--gray-800);">Daily Booking Count</h3>
+                        <table class="data-table">
+                            <thead><tr><th>Date</th><th>Bookings</th></tr></thead>
+                            <tbody>
+                                ${data.dailyBookings.map(d => `
+                                    <tr>
+                                        <td>${formatDate(d.date)}</td>
+                                        <td>${d.booking_count}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    ` : ''}
+                `;
+            } catch (err) {
+                showToast('Failed to generate report.', 'error');
+            }
+        }
+
+        async function loadEmployees() {
+            try {
+                const res = await fetch(`/api/manager/employees?userId=${currentUser.id}`);
+                const data = await res.json();
+                const container = document.getElementById('employeesList');
+
+                if (!data.employees || data.employees.length === 0) {
+                    container.innerHTML = '<p class="empty-text">No employees found. Add one using the button above.</p>';
+                    return;
+                }
+
+                container.innerHTML = `
+                    <table class="data-table">
+                        <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Actions</th></tr></thead>
+                        <tbody>
+                            ${data.employees.map(e => `
+                                <tr>
+                                    <td>${e.first_name} ${e.last_name}</td>
+                                    <td>${e.email}</td>
+                                    <td>${e.phone}</td>
+                                    <td>
+                                        <button class="btn-small btn-small--danger" onclick="deleteEmployee(${e.id})">Remove</button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            } catch (err) {
+                document.getElementById('employeesList').innerHTML = '<p class="error-text">Failed to load employees.</p>';
+            }
+        }
+
+        async function createEmployee() {
+            const firstName = document.getElementById('empFirstName').value.trim();
+            const lastName = document.getElementById('empLastName').value.trim();
+            const email = document.getElementById('empEmail').value.trim();
+            const phone = document.getElementById('empPhone').value.trim();
+            const address = document.getElementById('empAddress').value.trim();
+            const password = document.getElementById('empPassword').value;
+
+            if (!firstName || !lastName || !email || !phone || !address || !password) {
+                showToast('All fields are required.', 'error'); return;
+            }
+
+            try {
+                const res = await fetch('/api/manager/employees', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ firstName, lastName, email, phone, address, password, userId: currentUser.id })
+                });
+                const data = await res.json();
+                if (!res.ok) { showToast(data.error, 'error'); return; }
+                showToast('Employee created!', 'success');
+                document.getElementById('addEmployeeForm').style.display = 'none';
+                ['empFirstName', 'empLastName', 'empEmail', 'empPhone', 'empAddress', 'empPassword'].forEach(id => document.getElementById(id).value = '');
+                loadEmployees();
+            } catch (err) {
+                showToast('Failed to create employee.', 'error');
+            }
+        }
+
+        async function deleteEmployee(empId) {
+            if (!confirm('Are you sure you want to remove this employee?')) return;
+            try {
+                const res = await fetch(`/api/manager/employees/${empId}?userId=${currentUser.id}`, { method: 'DELETE' });
+                const data = await res.json();
+                if (!res.ok) { showToast(data.error, 'error'); return; }
+                showToast('Employee removed.', 'success');
+                loadEmployees();
+            } catch (err) {
+                showToast('Failed to remove employee.', 'error');
+            }
+        }
+    </script>
+</body>
+</html>

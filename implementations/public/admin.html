@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="SpaceHub Admin Panel — Manage rooms and spaces.">
+    <title>Admin Dashboard — SpaceHub</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Admin-specific layout tweaks to match dashboard */
+        .admin-layout {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        .dashboard__header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 20px;
+        }
+
+        .room-card__grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .room-item {
+            background: white;
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius);
+            overflow: hidden;
+            transition: var(--transition);
+        }
+
+        .room-item:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .room-item__img {
+            height: 160px;
+            background-size: cover;
+            background-position: center;
+            background-color: var(--gray-100);
+        }
+
+        .room-item__content {
+            padding: 20px;
+        }
+
+        .room-item__title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .room-item__info {
+            display: flex;
+            gap: 12px;
+            font-size: 0.85rem;
+            color: var(--gray-600);
+            margin-bottom: 12px;
+        }
+
+        .room-item__price {
+            font-weight: 700;
+            color: var(--primary);
+            font-size: 1.1rem;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 2000;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(4px);
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal__content {
+            background: white;
+            width: 100%;
+            max-width: 500px;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            overflow: hidden;
+            animation: slideUp 0.3s ease;
+        }
+
+        .modal__header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--gray-100);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal__title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--gray-800);
+        }
+
+        .modal__close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: var(--gray-400);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .modal__close:hover {
+            color: var(--danger);
+        }
+
+        .modal__body {
+            padding: 24px;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="dashboard">
+        <!-- Dashboard Nav -->
+        <nav class="dashboard__nav">
+            <a href="index.html" class="dashboard__nav-logo">
+                <div class="navbar__logo-icon" style="width:32px;height:32px;font-size:0.9rem;">⬡</div>
+                SpaceHub Admin
+            </a>
+            <div class="profile-menu">
+                <button class="profile-menu__avatar" id="profileToggle" onclick="toggleProfileMenu()">
+                    <span id="avatarInitial">A</span>
+                </button>
+                <div class="profile-menu__dropdown" id="profileDropdown">
+                    <a href="dashboard.html" class="profile-menu__item">
+                        <span class="profile-menu__item-icon">👤</span> Switch to User View
+                    </a>
+                    <button class="profile-menu__item profile-menu__item--danger" onclick="handleLogout()">
+                        <span class="profile-menu__item-icon">🚪</span> Sign Out
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Dashboard Content -->
+        <div class="dashboard__content">
+            <div class="dashboard__header">
+                <div class="dashboard__welcome">
+                    <h1>Admin Control Panel</h1>
+                    <p>Management interface for co-working spaces and rooms.</p>
+                </div>
+                <button class="btn btn-primary" onclick="openModal()" style="padding: 12px 24px; height: fit-content;">
+                    <span style="font-size: 1.2rem; line-height: 1;">+</span> Add New Room
+                </button>
+            </div>
+
+            <div class="admin-layout">
+                <!-- Room List Section -->
+                <div>
+                    <h2 style="margin-bottom: 20px; font-size: 1.5rem; font-weight: 700;">Existing Rooms</h2>
+                    <div class="room-card__grid" id="roomList">
+                        <!-- Rooms loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Room Modal -->
+    <div class="modal" id="roomModal">
+        <div class="modal__content">
+            <div class="modal__header">
+                <h2 class="modal__title">Create New Room</h2>
+                <button class="modal__close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal__body">
+                <form id="addRoomForm">
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label for="name"
+                            style="display:block; margin-bottom:5px; font-weight:600; font-size:0.9rem;">Room
+                            Name</label>
+                        <input type="text" id="name" required placeholder="e.g. Zen Focus Pod"
+                            style="width:100%; padding:10px; border:1px solid var(--gray-200); border-radius:8px;">
+                    </div>
+
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:15px;">
+                        <div class="form-group">
+                            <label for="type"
+                                style="display:block; margin-bottom:5px; font-weight:600; font-size:0.9rem;">Type</label>
+                            <select id="type" required
+                                style="width:100%; padding:10px; border:1px solid var(--gray-200); border-radius:8px;">
+                                <option value="Hot Desk">Hot Desk</option>
+                                <option value="Private Office">Private Office</option>
+                                <option value="Meeting Room">Meeting Room</option>
+                                <option value="Lounge Area">Lounge Area</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="capacity"
+                                style="display:block; margin-bottom:5px; font-weight:600; font-size:0.9rem;">Capacity</label>
+                            <input type="number" id="capacity" required min="1" value="1"
+                                style="width:100%; padding:10px; border:1px solid var(--gray-200); border-radius:8px;">
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label for="pricePerHour"
+                            style="display:block; margin-bottom:5px; font-weight:600; font-size:0.9rem;">Price Per Hour
+                            (฿)</label>
+                        <input type="number" id="pricePerHour" required min="0" step="0.01" placeholder="50.00"
+                            style="width:100%; padding:10px; border:1px solid var(--gray-200); border-radius:8px;">
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label for="image"
+                            style="display:block; margin-bottom:5px; font-weight:600; font-size:0.9rem;">Room
+                            Image</label>
+                        <input type="file" id="image" accept="image/*"
+                            style="width:100%; padding:10px; border:1px solid var(--gray-200); border-radius:8px; background: white;">
+                        <input type="hidden" id="imageUrl">
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 20px;">
+                        <label for="description"
+                            style="display:block; margin-bottom:5px; font-weight:600; font-size:0.9rem;">Description</label>
+                        <textarea id="description" rows="3" placeholder="Describe features..."
+                            style="width:100%; padding:10px; border:1px solid var(--gray-200); border-radius:8px; font-family:inherit;"></textarea>
+                    </div>
+
+                    <button type="submit" class="btn-apply" id="submitBtn">Create New Room</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script src="app.js"></script>
+    <script>
+        // Check Auth
+        let currentUser = null;
+        const userData = sessionStorage.getItem('user');
+
+        if (!userData) {
+            window.location.href = 'login.html';
+        } else {
+            currentUser = JSON.parse(userData);
+            if (currentUser.role !== 'admin') {
+                window.location.href = 'dashboard.html';
+            }
+            document.getElementById('avatarInitial').textContent = currentUser.firstName.charAt(0).toUpperCase();
+        }
+
+        // Modal Logic
+        let editingRoomId = null;
+
+        function openModal(room = null) {
+            const modal = document.getElementById('roomModal');
+            const title = modal.querySelector('.modal__title');
+            const submitBtn = document.getElementById('submitBtn');
+
+            if (room) {
+                editingRoomId = room.id;
+                title.textContent = 'Edit Room';
+                submitBtn.textContent = 'Update Room';
+
+                // Fill form
+                document.getElementById('name').value = room.name;
+                document.getElementById('type').value = room.type;
+                document.getElementById('capacity').value = room.capacity;
+                document.getElementById('pricePerHour').value = room.price_per_hour;
+                document.getElementById('imageUrl').value = room.image_url || '';
+                document.getElementById('description').value = room.description || '';
+            } else {
+                editingRoomId = null;
+                title.textContent = 'Create New Room';
+                submitBtn.textContent = 'Create New Room';
+                document.getElementById('addRoomForm').reset();
+            }
+
+            modal.classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            document.getElementById('roomModal').classList.remove('show');
+            document.body.style.overflow = 'auto';
+            document.getElementById('addRoomForm').reset();
+            document.getElementById('imageUrl').value = '';
+            document.getElementById('image').value = '';
+            editingRoomId = null;
+        }
+
+        // Close modal when clicking escape
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeModal();
+        });
+
+        // Close modal when clicking backdrop
+        document.getElementById('roomModal').addEventListener('click', (e) => {
+            if (e.target.id === 'roomModal') closeModal();
+        });
+
+        async function loadRooms() {
+            try {
+                const res = await fetch('/api/rooms');
+                const rooms = await res.json();
+                const container = document.getElementById('roomList');
+
+                if (rooms.length === 0) {
+                    container.innerHTML = '<p style="color:var(--gray-400)">No rooms added yet.</p>';
+                    return;
+                }
+
+                container.innerHTML = rooms.map(room => `
+                    <div class="room-item">
+                        <div class="room-item__img" style="background-image: url('${room.image_url || 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=800'}')"></div>
+                        <div class="room-item__content">
+                            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+                                <div class="room-item__title" style="margin-bottom:0">${room.name}</div>
+                                <button class="btn" onclick='openModal(${JSON.stringify(room).replace(/'/g, "&apos;")})' style="padding:4px 8px; font-size:0.75rem; background:var(--light-blue); color:var(--primary); border:none;">Edit</button>
+                            </div>
+                            <div class="room-item__info">
+                                <span>🏷️ ${room.type}</span>
+                                <span>👥 Max ${room.capacity}</span>
+                            </div>
+                            <div class="room-item__price">฿${Number(room.price_per_hour).toLocaleString()}/hr</div>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (err) {
+                console.error('Failed to load rooms:', err);
+            }
+        }
+
+        document.getElementById('addRoomForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            btn.classList.add('loading');
+
+            const isEditing = editingRoomId !== null;
+            btn.textContent = isEditing ? 'Updating...' : 'Creating...';
+
+            const formData = new FormData();
+            formData.append('name', document.getElementById('name').value);
+            formData.append('type', document.getElementById('type').value);
+            formData.append('capacity', document.getElementById('capacity').value);
+            formData.append('pricePerHour', document.getElementById('pricePerHour').value);
+            formData.append('description', document.getElementById('description').value);
+
+            const imageFile = document.getElementById('image').files[0];
+            if (imageFile) {
+                formData.append('image', imageFile);
+            }
+
+            const existingImageUrl = document.getElementById('imageUrl').value;
+            if (existingImageUrl) {
+                formData.append('imageUrl', existingImageUrl);
+            }
+
+            try {
+                const url = isEditing ? `/api/admin/rooms/${editingRoomId}` : '/api/admin/rooms';
+                const method = isEditing ? 'PUT' : 'POST';
+
+                const res = await fetch(url, {
+                    method: method,
+                    body: formData
+                });
+
+                if (res.ok) {
+                    showToast(isEditing ? 'Room updated successfully! 🎉' : 'Room created successfully! 🎉', 'success');
+                    closeModal();
+                    loadRooms();
+                } else {
+                    const contentType = res.headers.get('content-type');
+                    if (contentType && contentType.includes('application/json')) {
+                        const data = await res.json();
+                        showToast(data.error || 'Failed to process request', 'error');
+                    } else {
+                        showToast(`Server returned ${res.status}: ${res.statusText}. Try restarting your server.`, 'error');
+                    }
+                }
+            } catch (err) {
+                console.error('Fetch error:', err);
+                showToast('Connection error. Is the server running?', 'error');
+            } finally {
+                btn.classList.remove('loading');
+                btn.textContent = isEditing ? 'Update Room' : 'Create New Room';
+            }
+        });
+
+        function handleLogout() {
+            sessionStorage.removeItem('user');
+            window.location.href = 'index.html';
+        }
+
+        function toggleProfileMenu() {
+            const dropdown = document.getElementById('profileDropdown');
+            dropdown.classList.toggle('show');
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            const menu = document.querySelector('.profile-menu');
+            if (menu && !menu.contains(e.target)) {
+                document.getElementById('profileDropdown').classList.remove('show');
+            }
+        });
+
+        loadRooms();
+    </script>
+</body>
+
+</html>
