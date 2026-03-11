@@ -309,11 +309,12 @@ describe('server.js API Routes - Core Business Logic Testing', () => {
 
         it('should successfully instantiate a booking in a pending state and allocate exact desk IDs', async () => {
             mockSql
-                .mockResolvedValueOnce([{ id: 1 }])
-                .mockResolvedValueOnce([])
-                .mockResolvedValueOnce([{ id: 5, label: 'Desk 5' }])
-                .mockResolvedValueOnce([{ id: 100, status: 'pending' }])
-                .mockResolvedValueOnce([]);
+                .mockResolvedValueOnce([{ id: 1 }]) // clearance
+                .mockResolvedValueOnce([])          // availability check
+                .mockResolvedValueOnce([{ id: 5, label: 'Desk 5' }]) // available desks
+                .mockResolvedValueOnce([{ expiry: '2026-10-10T10:30:00.000Z' }]) // expiryResult query
+                .mockResolvedValueOnce([{ id: 100, status: 'pending' }]) // INSERT booking
+                .mockResolvedValueOnce([]); // INSERT booking_desks
             const res = await request(app).post('/api/bookings')
                 .send({ userId: 1, date: '2026-10-10', startTime: '10:00', endTime: '12:00', numDesks: 1 });
             expect(res.statusCode).toBe(201);
