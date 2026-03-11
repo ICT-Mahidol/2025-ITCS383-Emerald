@@ -12,7 +12,7 @@ This document presents the C4 architecture diagrams for SpaceHub, a co-working s
 
 ### Description
 
-The Context Diagram shows SpaceHub as a single system and identifies the three types of users (actors) and two external systems that interact with it.
+The Context Diagram shows SpaceHub as a single system and identifies the three types of users (actors) and two external systems that interact with.
 
 ### Actors
 
@@ -123,8 +123,47 @@ The components are organized around distinct business capabilities, following th
 
 7. **Security System (CCTV) is isolated** at the boundary of the system because it integrates with external hardware. If the CCTV provider changes, only this component needs to be updated. The component provides a simple interface for employees to view camera status without exposing the complexity of the external CCTV protocol.
 
-### Cross-Cutting Concerns
+---
 
-- **Encryption:** Customer PII (first name, last name, address, phone) is encrypted using AES-256-CBC before being stored in the Database. This is handled by a shared crypto module (`lib/crypto.js`) used by the Create Account and profile management flows.
-- **Role-Based Access Control:** The Authentication component determines the user's role (customer, employee, manager), and each API endpoint enforces role restrictions through middleware (`lib/auth.js`). This ensures that customers cannot access employee endpoints, and employees cannot access manager endpoints.
-- **Booking Expiry:** A background job (`lib/expiry.js`) periodically checks for unpaid bookings older than 30 minutes and marks them as expired, releasing the reserved desks. This fulfills the requirement that unpaid booking slots return to availability after 30 minutes.
+## Use Case Diagram
+
+![Use Case Diagram](diagrams/CoWorkingSpace_UseCase.jpg)
+
+### Description
+
+The Use Case Diagram shows all the interactions between the four actors (Customer, Employee, Manager, Bank System) and the Co-Working Space Management System.
+
+### Customer Use Cases
+
+| Use Case | Description |
+|----------|-------------|
+| **Create Account** | Register a new account with personal details (name, phone, address) |
+| **Login** | Authenticate with email and password |
+| **Apply Membership** | Subscribe to a membership plan (day/month/year). Includes checking availability |
+| **Book Time Slot** | Reserve desks for a specific date and time slot |
+| **Make Payment** | Pay for memberships or bookings. Extends to three payment methods: Credit, True Money, and Bank Transfer |
+| **Cancel Booking** | Cancel an existing reservation (1-day-before policy) |
+
+### Employee Use Cases
+
+| Use Case | Description |
+|----------|-------------|
+| **View Reservation** | View all customer reservations by date and perform check-ins |
+| **Manage Inventory** | Track and update equipment stock levels (desks, chairs, electronics) |
+| **Monitor CCTV** | View security camera feeds from the co-working space |
+| **Record Expenses** | Log daily operational expenses for the space |
+
+### Manager Use Cases
+
+| Use Case | Description |
+|----------|-------------|
+| **View Revenue Reports** | View daily/monthly revenue summaries. Includes generating detailed income reports |
+| **Manage Employees** | Add, view, and remove employee accounts |
+
+### Relationships
+
+- **Include:** "Apply Membership" includes "Check Availability" — the system always checks for existing active memberships before allowing a new subscription
+- **Extend:** "Make Payment" extends to three payment method options: Credit (card), True Money (TrueWallet), and Bank Transfer (via Banking API)
+- **Include:** "View Revenue Reports" includes "Generate Income Report" — revenue viewing provides the ability to generate detailed monthly income vs expense reports
+
+---

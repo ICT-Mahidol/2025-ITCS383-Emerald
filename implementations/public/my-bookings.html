@@ -130,6 +130,9 @@
         function canCancelBooking(booking) {
             if (booking.status !== 'confirmed' && booking.status !== 'pending') return false;
 
+            // Pending (unpaid) bookings can always be cancelled
+            if (booking.status === 'pending') return true;
+
             const bkkDateString = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok' }).format(new Date());
             const todayBkk = new Date(bkkDateString);
             const tomorrowBkk = new Date(todayBkk);

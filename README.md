@@ -10,9 +10,10 @@ A full-featured co-working space management system with desk booking, membership
 - Account Registration & Login — secure sign-up with encrypted PII storage
 - Desk Booking — 3-step flow: date selection, time slot picker with availability grid, payment
 - Multiple Payment Methods — Credit Card, Bank Transfer, TrueWallet (simulated)
-- My Bookings — view, track status, and cancel reservations (1-day-before policy)
+- My Bookings — view, track status, and cancel reservations
+- Booking Expiry — unpaid bookings auto-expire after 30 minutes with live countdown
 - Profile Management — view and update personal information
-- Membership Plans — Day, Month, and Year subscriptions
+- Membership Plans — Day, Month, and Year subscriptions with custom durations
 
 ### Employee Features
 - Reservation Management — view all reservations by date
@@ -22,31 +23,32 @@ A full-featured co-working space management system with desk booking, membership
 - CCTV Monitoring — simulated camera feed dashboard (stub API)
 
 ### Manager Features
-- Revenue Dashboard — daily/monthly revenue overview with breakdown
+- Revenue Dashboard — daily/monthly revenue overview with payment method breakdown
 - Income Reports — monthly revenue vs. expenses with net profit calculation
-- Employee Management — add, view, and remove employee accounts
+- Employee Management — add, view, update, and remove employee accounts
+- Daily Summary — real-time stats: reservations, income, expenses, net income, member count
 - Banking API — simulated bank transfer endpoint
 
 ### Security & Infrastructure
 - bcrypt Password Hashing — salted hashing with 10 rounds
-- AES-256-CBC Encryption — customer PII (name, phone, address) encrypted at rest
+- AES-256-GCM Encryption — customer PII (name, phone, address) encrypted at rest with authenticated encryption
 - Role-Based Access Control — server-side role verification (customer, employee, manager)
-- Booking Expiry — unpaid reservations auto-expire after 30 minutes
+- Booking Expiry — unpaid reservations auto-expire after 30 minutes (background job)
 - Neon PostgreSQL — serverless database with indexed queries
-- Docker — containerized with multi-stage Alpine build
-- CI/CD — GitHub Actions with ESLint + Jest tests + Docker build
+- Docker — containerized with multi-stage Alpine build, non-root user
+- CI/CD — GitHub Actions with lint + Jest tests + SonarCloud analysis + Docker build
 
 ## Tech Stack
 
 | Layer        | Technology                          |
 |--------------|-------------------------------------|
 | Frontend     | HTML, CSS (BEM), Vanilla JavaScript |
-| Backend      | Node.js, Express                    |
+| Backend      | Node.js 20, Express                 |
 | Database     | Neon (Serverless PostgreSQL)        |
-| Encryption   | AES-256-CBC (Node.js crypto)        |
+| Encryption   | AES-256-GCM (Node.js crypto)       |
 | Auth         | bcryptjs (password hashing)         |
-| Linter       | ESLint                              |
 | Testing      | Jest, Supertest                     |
+| Code Quality | SonarCloud                          |
 | Container    | Docker (Alpine)                     |
 | Registry     | GitHub Container Registry           |
 | CI/CD        | GitHub Actions                      |
@@ -62,7 +64,8 @@ A full-featured co-working space management system with desk booking, membership
 │   └── diagrams/                   # C4 diagram images
 ├── implementations/
 │   ├── lib/
-│   │   ├── crypto.js               # AES-256-CBC encrypt/decrypt helpers
+│   │   ├── crypto.js               # AES-256-GCM encrypt/decrypt helpers
+│   │   ├── crypto.test.js          # Unit tests for encryption
 │   │   ├── auth.js                 # Role-based access control middleware
 │   │   └── expiry.js               # Background job: expire unpaid bookings
 │   ├── public/
@@ -73,18 +76,16 @@ A full-featured co-working space management system with desk booking, membership
 │   │   ├── profile.html            # User profile page
 │   │   ├── booking.html            # 3-step desk booking flow
 │   │   ├── my-bookings.html        # View / cancel bookings
+│   │   ├── payment.html            # Payment form (3 methods + countdown)
 │   │   ├── employee-dashboard.html # Employee operations panel
 │   │   ├── manager-dashboard.html  # Manager analytics & controls
 │   │   ├── style.css               # Blue & white BEM design system
 │   │   └── app.js                  # Shared frontend utilities
-│   ├── tests/
-│   │   ├── helpers/mockSql.js      # Mock PostgreSQL for testing
-│   │   ├── unit/                   # Unit tests (crypto, auth, expiry)
-│   │   └── integration/            # Integration tests (routes)
 │   ├── server.js                   # Express server + all API endpoints
+│   ├── server.test.js              # Jest/Supertest API tests
 │   ├── Dockerfile                  # Multi-stage Docker build
 │   ├── .dockerignore               # Docker build exclusions
-│   ├── .eslintrc.json              # ESLint configuration
+│   ├── sonar-project.properties    # SonarCloud configuration
 │   └── package.json
 ├── Emerald_D3_AILog.md             # AI usage transparency log
 └── README.md                       # This file
@@ -94,7 +95,7 @@ A full-featured co-working space management system with desk booking, membership
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) (v18+)
+- [Node.js](https://nodejs.org/) (v20+)
 - A free [Neon](https://neon.tech) database account
 - [Docker](https://www.docker.com/) (optional, for containerized runs)
 
@@ -179,19 +180,23 @@ npm run lint
 | POST   | `/api/login`     | Authenticate a user      |
 
 ### Membership
-| Method | Endpoint                        | Description                  |
-|--------|---------------------------------|------------------------------|
-| POST   | `/api/membership/purchase`      | Purchase a membership plan   |
-| GET    | `/api/membership/status/:userId`| Check membership status      |
+| Method | Endpoint                          | Description                  |
+|--------|-----------------------------------|------------------------------|
+| POST   | `/api/membership`                 | Create a membership plan     |
+| POST   | `/api/membership/:membershipId/pay` | Pay for pending membership |
+| GET    | `/api/membership/:userId`         | Check membership status      |
+| GET    | `/api/pricing`                    | Get pricing for all plans    |
 
 ### Booking (Customer)
 | Method | Endpoint                            | Description                        |
 |--------|-------------------------------------|------------------------------------|
 | GET    | `/api/bookings/availability`        | Check desk availability by date    |
+| GET    | `/api/timeslots`                    | Get available time slots           |
 | POST   | `/api/bookings`                     | Create a new booking               |
-| GET    | `/api/bookings/my/:userId`          | List user's bookings               |
+| GET    | `/api/bookings/user/:userId`        | List user's bookings               |
+| GET    | `/api/bookings/:bookingId`          | Get a single booking               |
 | POST   | `/api/bookings/:bookingId/pay`      | Pay for a pending booking          |
-| POST   | `/api/bookings/:bookingId/cancel`   | Cancel a booking (1-day policy)    |
+| POST   | `/api/bookings/:bookingId/cancel`   | Cancel a booking                   |
 
 ### Employee
 | Method | Endpoint                       | Description                    |
@@ -205,18 +210,27 @@ npm run lint
 | GET    | `/api/employee/cctv`           | Simulated CCTV camera status   |
 
 ### Manager
-| Method | Endpoint                  | Description                        |
-|--------|---------------------------|------------------------------------|
-| GET    | `/api/manager/revenue`    | Revenue summary (daily/monthly)    |
-| GET    | `/api/manager/report`     | Income report with expenses        |
-| GET    | `/api/manager/employees`  | List all employees                 |
-| POST   | `/api/manager/employees`  | Add a new employee                 |
-| DELETE | `/api/manager/employees/:id` | Remove an employee              |
+| Method | Endpoint                       | Description                        |
+|--------|--------------------------------|------------------------------------|
+| GET    | `/api/manager/summary`         | Daily summary stats                |
+| GET    | `/api/manager/revenue`         | Revenue summary (daily/monthly)    |
+| GET    | `/api/manager/report`          | Income report with expenses        |
+| GET    | `/api/manager/employees`       | List all employees                 |
+| POST   | `/api/manager/employees`       | Add a new employee                 |
+| PUT    | `/api/manager/employees/:id`   | Update an employee                 |
+| DELETE | `/api/manager/employees/:id`   | Remove an employee                 |
 
 ### Simulated External APIs
 | Method | Endpoint             | Description                    |
 |--------|----------------------|--------------------------------|
 | POST   | `/api/bank/transfer` | Simulated banking transfer API |
+
+## Cancellation Policy
+
+| Booking Status | Rule |
+|---|---|
+| **Pending** (unpaid) | Can be cancelled anytime |
+| **Confirmed** (paid) | Requires 1+ day notice before booking date |
 
 ## User Roles
 
@@ -224,7 +238,7 @@ npm run lint
 |------------|-----------------------------------------------------------|
 | `customer` | Dashboard, Profile, Booking, My Bookings, Membership      |
 | `employee` | Reservations, Check-In, Equipment, Expenses, CCTV         |
-| `manager`  | Revenue, Income Reports, Employee Management              |
+| `manager`  | Revenue, Income Reports, Employee Management, Daily Summary |
 
 After login, users are automatically redirected to their role-specific dashboard.
 
@@ -233,20 +247,23 @@ After login, users are automatically redirected to their role-specific dashboard
 The full pipeline is defined in `.github/workflows/workflow.yml`:
 
 ```
-Push/PR to main → CI (ESLint + Jest tests + Docker build test)
+Push/PR to main → CI (lint + Jest tests + Docker build test)
+                → SonarCloud analysis (code quality + coverage)
 Merge to main   → CI + CD (build → push to GHCR → deploy to Render)
 ```
 
-| Trigger             | Jobs                                              |
-|---------------------|---------------------------------------------------|
-| Push / PR to `main` | **CI** — ESLint + Jest tests + Docker image build |
-| Push to `main` only | **CD** — Push image to GHCR + deploy to Render   |
+| Trigger             | Jobs                                                     |
+|---------------------|----------------------------------------------------------|
+| Push / PR to `main` | **CI** — Lint + Jest tests + Docker image build          |
+| Push / PR to `main` | **SonarCloud** — Code quality analysis + test coverage   |
+| Push to `main` only | **CD** — Push image to GHCR + deploy to Render           |
 
 ### Required Secrets
 
 | Secret                  | Where to get it                              |
 |-------------------------|----------------------------------------------|
 | `RENDER_DEPLOY_HOOK_URL`| Render dashboard → Settings → Deploy Hook    |
+| `SONAR_TOKEN`           | SonarCloud → My Account → Security           |
 
 > **Note:** GHCR authentication uses the built-in `GITHUB_TOKEN` — no extra setup needed.
 
@@ -256,8 +273,12 @@ Merge to main   → CI + CD (build → push to GHCR → deploy to Render)
 - **Auto-Deploy:** Off (controlled by GitHub Actions deploy hook)
 - **Environment Variables:**
   - `DATABASE_URL` = your Neon connection string
-  - `ENCRYPTION_KEY` = 64-character hex string for AES-256 encryption
+  - `ENCRYPTION_KEY` = 64-character hex string for AES-256-GCM encryption
 
-## Team
-
-**Emerald** — ITCS383, Mahidol University, 2025
+### Team Members <br>
+6688139&emsp;Naruebordint Veangnont <br>
+6688141&emsp;Rattee Watperatam <br>
+6688155&emsp;Nattaphong Jullayakiat <br>
+6688164&emsp;Veerakron Kaewthong <br>
+6688172&emsp;Veerakorn No-in <br>
+6688239&emsp;Piyada Chalermnontakarn <br>
