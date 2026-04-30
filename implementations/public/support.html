@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Support - SpaceHub</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="auth-page">
+    <div class="auth-card">
+        <header class="auth-card__header">
+            <div class="auth-card__logo" style="animation: float 3s ease-in-out infinite;">🎧</div>
+            <h1 class="auth-card__title">Customer Support</h1>
+            <p class="auth-card__subtitle">How can we help you today?</p>
+        </header>
+
+        <form id="supportForm">
+            <div class="form-group" style="margin-bottom: 24px;">
+                <label for="issueType" style="margin-bottom: 10px; display: block; font-weight: 600;">Issue
+                    Category</label>
+                <select id="issueType" class="form-group input">
+                    <option value="booking">Booking Confirmation Error</option>
+                    <option value="payment">Payment & Billing Issue</option>
+                    <option value="membership">Membership Access</option>
+                    <option value="other">General Inquiry</option>
+                </select>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 24px;">
+                <label for="supportMessage" style="margin-bottom: 10px; display: block; font-weight: 600;">Message
+                    Detail</label>
+                <textarea id="supportMessage" placeholder="Please describe your problem in detail..." required
+                    style="border-radius: var(--radius); min-height: 150px;"></textarea>
+            </div>
+
+            <button type="submit" class="btn-submit" id="submitBtn">
+                Send Request
+            </button>
+        </form>
+
+        <div class="auth-card__footer">
+            <a href="dashboard.html" class="btn-back" style="border: none; background: none; color: var(--primary);">
+                ← Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+
+    <script>
+        document.getElementById('supportForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            const userData = sessionStorage.getItem('user');
+
+            // เช็กว่า User ล็อกอินหรือยัง
+            if (!userData) {
+                alert('Please login first');
+                return;
+            }
+
+            const currentUser = JSON.parse(userData);
+            const category = document.getElementById('issueType').value;
+            const message = document.getElementById('supportMessage').value;
+
+            btn.disabled = true;
+            btn.innerText = 'Sending...';
+
+            try {
+                const res = await fetch('/api/support/tickets', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userId: currentUser.id,
+                        category: category,
+                        message: message
+                    })
+                });
+
+                if (res.ok) {
+                    // ✅ ตรงนี้แหละครับที่จะเรียก Notification ขึ้นมาโชว์
+                    showToast('Request sent successfully!', 'success');
+                    document.getElementById('supportForm').reset();
+                } else {
+                    showToast('Failed to send request.', 'error');
+                }
+            } catch (err) {
+                showToast('Connection error.', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerText = 'Send Request';
+            }
+        });
+    </script>
+    <div class="toast" id="toast"></div>
+</body>
+
+</html>

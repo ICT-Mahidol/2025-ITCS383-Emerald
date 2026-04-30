@@ -68,6 +68,17 @@ async function initDB() {
         created_at TIMESTAMP DEFAULT NOW()
       )
     `;
+    await sql`
+      CREATE TABLE IF NOT EXISTS tickets (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id),
+      category VARCHAR(50) NOT NULL,
+      message TEXT NOT NULL,
+      status VARCHAR(20) NOT NULL DEFAULT 'pending',
+      admin_reply TEXT,
+      created_at TIMESTAMP DEFAULT NOW()
+      )
+    `;
 
     // Add role column if missing (for existing DBs)
     await sql`
@@ -139,19 +150,20 @@ async function initDB() {
 
     // Bookings table
     await sql`
-      CREATE TABLE IF NOT EXISTS bookings (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER NOT NULL REFERENCES users(id),
-        booking_date DATE NOT NULL,
-        start_time TIME NOT NULL,
-        end_time TIME NOT NULL,
-        num_desks INTEGER NOT NULL DEFAULT 1,
-        status VARCHAR(20) NOT NULL DEFAULT 'pending',
-        payment_id INTEGER REFERENCES payments(id),
-        created_at TIMESTAMP DEFAULT NOW(),
-        expires_at TIMESTAMP
-      )
-    `;
+    CREATE TABLE IF NOT EXISTS bookings (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    booking_date DATE NOT NULL,
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL,
+    num_desks INTEGER NOT NULL DEFAULT 1,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    payment_id INTEGER REFERENCES payments(id),
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW(), -- เพิ่มบรรทัดนี้
+    expires_at TIMESTAMP
+    )
+  `;
 
     // Booking-Desks junction table
     await sql`
@@ -610,7 +622,7 @@ app.post('/api/bookings/:bookingId/pay', async (req, res) => {
     `;
 
     await sql`
-      UPDATE bookings SET status = 'confirmed', payment_id = ${payment[0].id}, expires_at = NULL WHERE id = ${bookingId}
+      UPDATE bookings SET status = 'pending', payment_id = ${payment[0].id}, expires_at = NULL WHERE id = ${bookingId}
     `;
 
     res.json({
@@ -1035,5 +1047,139 @@ if (require.main === module) {
     });
   });
 }
+
+app.post('/api/support/tickets', async (req, res) => {
+  try {
+    const { userId, category, message } = req.body;
+    if (!userId || !category || !message) {
+      return res.status(400).json({ error: 'All fields are required.' });
+    }
+    // บันทึกลงตารางที่ควรสร้างไว้ (ในที่นี้สมมติชื่อตาราง tickets)
+    await sql`
+            INSERT INTO tickets (user_id, category, message, status)
+            VALUES (${userId}, ${category}, ${message}, 'pending')
+        `;
+    res.status(201).json({ message: 'Ticket created successfully!' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to create ticket.' });
+  }
+});
+
+app.get('/api/employee/tickets', requireRole(getSql, 'employee', 'manager'), async (req, res) => {
+  try {
+    // ดึงเฉพาะรายการที่ยังไม่ได้ตอบ (pending)
+    const tickets = await sql`
+            SELECT id, category, message, status FROM tickets 
+            WHERE status = 'pending' 
+            ORDER BY created_at DESC
+        `;
+    res.json({ tickets });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch tickets.' });
+  }
+});
+
+app.post('/api/support/tickets/:id/reply', requireRole(getSql, 'employee', 'manager'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reply } = req.body;
+    await sql`
+            UPDATE tickets 
+            SET admin_reply = ${reply}, status = 'replied' 
+            WHERE id = ${id}
+        `;
+    res.json({ message: 'Reply sent successfully' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to send reply' });
+  }
+});
+
+// 1. ดึงข้อความทั้งหมดของ User คนนั้น
+app.get('/api/user/messages', async (req, res) => {
+  const { userId } = req.query;
+  const messages = await sql`
+        SELECT * FROM tickets 
+        WHERE user_id = ${userId} 
+        ORDER BY created_at DESC
+    `;
+  res.json({ messages });
+});
+
+// 2. อัปเดตสถานะเป็น 'read' (อ่านแล้ว)
+app.post('/api/support/tickets/:id/read', async (req, res) => {
+  const { id } = req.params;
+  await sql`
+        UPDATE tickets SET status = 'read' 
+        WHERE id = ${id} AND status = 'replied'
+    `;
+  res.json({ success: true });
+});
+
+// เพิ่ม Endpoint นี้ใน server.js ต่อจาก API อื่นๆ
+// ใน server.js ค้นหา app.get('/api/user/notifications', ...) แล้วแทนที่ด้วยโค้ดนี้:
+
+app.get('/api/user/notifications', async (req, res) => {
+  try {
+    const { userId } = req.query;
+    const user = await sql`SELECT role FROM users WHERE id = ${userId}`;
+    const role = user[0]?.role || 'customer';
+
+    let response = {
+      unreadMessages: 0,
+      pendingActionBookings: 0, // สำหรับ Admin/Employee ดูว่ามีค้าง confirm ไหม
+      newlyConfirmedBookings: 0  // สำหรับ User ดูว่ามีงานไหนเพิ่ง confirm ไหม
+    };
+
+    // 1. นับข้อความ Support ที่ตอบกลับมา (เหมือนเดิม)
+    const tickets = await sql`SELECT COUNT(*)::int FROM tickets WHERE user_id = ${userId} AND status = 'replied'`;
+    response.unreadMessages = tickets[0].count;
+
+    if (role === 'manager' || role === 'employee') {
+      // 2. ถ้าเป็นพนักงาน: นับการจองสถานะ 'pending' ที่รอการ Confirm
+      const pending = await sql`SELECT COUNT(*)::int FROM bookings WHERE status = 'pending'`;
+      response.pendingActionBookings = pending[0].count;
+    } else {
+      // 3. ถ้าเป็นลูกค้า: นับการจองที่เพิ่งได้รับการ Confirm ใน 10 นาทีล่าสุด (เพื่อไม่ให้เด้งค้างทั้งวัน)
+      const confirmed = await sql`
+        SELECT COUNT(*)::int FROM bookings 
+        WHERE user_id = ${userId} 
+        AND status = 'confirmed' 
+        AND updated_at >= NOW() - INTERVAL '10 minutes'
+      `;
+      response.newlyConfirmedBookings = confirmed[0].count;
+    }
+
+    res.json(response);
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.delete('/api/support/tickets/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    // ลบข้อมูลจากตาราง tickets ตาม ID ที่ส่งมา
+    await sql`DELETE FROM tickets WHERE id = ${id}`;
+    res.json({ success: true, message: 'Ticket deleted' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete ticket' });
+  }
+});
+
+app.post('/api/employee/bookings/:id/confirm', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await sql`
+            UPDATE bookings 
+            SET status = 'confirmed', updated_at = NOW() 
+            WHERE id = ${id}
+        `;
+    res.json({ success: true, message: 'Booking confirmed and user notified!' });
+  } catch (err) {
+    console.error("Confirm Error:", err); // เพิ่มบรรทัดนี้เพื่อดูสาเหตุที่แท้จริงใน Terminal
+    res.status(500).json({ error: 'Failed to confirm booking' });
+  }
+});
+
 
 module.exports = { app, setSql };

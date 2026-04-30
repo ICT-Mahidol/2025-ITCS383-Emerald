@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inbox - SpaceHub</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* สไตล์หน้า Inbox แบบไม่มี Navbar */
+        .inbox-container {
+            max-width: 800px;
+            margin: 60px auto;
+            padding: 0 20px;
+        }
+
+        .message-card {
+            background: white;
+            border-radius: var(--radius);
+            padding: 25px;
+            margin-bottom: 20px;
+            border-left: 8px solid var(--gray-200);
+            box-shadow: var(--shadow-sm);
+            transition: var(--transition);
+        }
+
+        .message-card--unread {
+            border-left-color: var(--primary);
+            background: linear-gradient(to right, #f0f7ff, white);
+        }
+
+        .admin-reply {
+            margin-top: 15px;
+            padding: 18px;
+            background: #f8fafc;
+            border-radius: 12px;
+            border: 1px dashed var(--success);
+        }
+
+        .admin-label {
+            color: var(--success);
+            font-weight: 700;
+            font-size: 0.85rem;
+        }
+
+        .btn-back-home {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+        }
+    </style>
+</head>
+
+<body class="bg-light">
+
+    <div class="inbox-container">
+        <a href="dashboard.html" class="btn-back-home">← Back to Dashboard</a>
+
+        <header style="margin-bottom: 30px;">
+            <h1 style="font-size: 2.2rem; color: var(--gray-800);">Inbox</h1>
+            <p style="color: var(--gray-600);">Your support conversations with Admin</p>
+        </header>
+
+        <div id="messageList">
+            <p style="text-align: center; color: var(--gray-400); padding: 40px;">Checking messages...</p>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        // ดึงข้อมูล User จาก sessionStorage ผ่าน app.js
+        const currentUser = JSON.parse(sessionStorage.getItem('user'));
+
+        async function loadMessages() {
+            if (!currentUser) {
+                document.getElementById('messageList').innerHTML = '<p>Please login first.</p>';
+                return;
+            }
+
+            try {
+                // เรียก API ดึงข้อความ
+                const res = await fetch(`/api/user/messages?userId=${currentUser.id}`);
+                const data = await res.json();
+                const container = document.getElementById('messageList');
+
+                if (!data.messages || data.messages.length === 0) {
+                    container.innerHTML = `<div style="text-align:center; padding:60px; color:var(--gray-400);">
+                        <p>No messages in your inbox.</p>
+                    </div>`;
+                    return;
+                }
+
+                container.innerHTML = data.messages.map(msg => `
+    <div class="message-card ${msg.status === 'replied' ? 'message-card--unread' : ''}" 
+         id="msg-card-${msg.id}">
+        <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+            <div>
+                <span style="background:var(--primary-glow); color:var(--primary); padding:4px 12px; border-radius:20px; font-size:0.75rem; font-weight:700;">${msg.category}</span>
+                <span style="font-size:0.8rem; color:var(--gray-400); margin-left:10px;">${new Date(msg.created_at).toLocaleString()}</span>
+            </div>
+            <button onclick="deleteMessage(${msg.id}, event)" 
+                    style="border:none; background:none; color:var(--danger); cursor:pointer; font-size:1.1rem; padding:5px;"
+                    title="Delete message">
+                🗑️
+            </button>
+        </div>
+        <div onclick="readMessage(${msg.id})">
+            <strong>Question:</strong> ${msg.message}
+            ${msg.admin_reply ? `
+                <div class="admin-reply">
+                    <span class="admin-label">💬 Admin Response:</span><br>
+                    ${msg.admin_reply}
+                </div>
+            ` : '<p style="font-size:0.8rem; color:var(--gray-400); margin-top:10px;">Waiting for admin response...</p>'}
+        </div>
+    </div>
+`).join('');
+            } catch (err) {
+                console.error("Failed to load messages");
+            }
+        }
+
+        async function readMessage(ticketId) {
+            // ยิง API อัปเดตสถานะว่าอ่านแล้ว
+            await fetch(`/api/support/tickets/${ticketId}/read`, { method: 'POST' });
+            loadMessages(); // โหลดตารางใหม่เพื่อให้แถบสีฟ้าหายไป
+        }
+
+        // ✅ รันโหลดข้อมูลทันที โดยไม่ต้องเช็ก Navbar Element
+        window.onload = () => {
+            loadMessages();
+            if (typeof checkNewMessages === 'function') {
+                checkNewMessages();
+            }
+        };
+
+        async function deleteMessage(ticketId, event) {
+            event.stopPropagation(); // สำคัญมาก: กันไม่ให้การคลิกปุ่มลบไปโดนฟังก์ชันอ่านข้อความ
+
+            if (!confirm('Are you sure you want to delete this message?')) return;
+
+            try {
+                // ยิงคำสั่ง DELETE ไปที่ Server
+                const res = await fetch(`/api/support/tickets/${ticketId}`, {
+                    method: 'DELETE'
+                });
+
+                if (res.ok) {
+                    // ใช้ alert แจ้งเตือนเพราะในหน้า inbox อาจจะยังไม่มีระบบ toast
+                    alert('Message deleted successfully');
+                    loadMessages(); // สั่งโหลดรายการใหม่ทันที ข้อมูลที่ลบจะหายไปจากหน้าจอ
+                } else {
+                    alert('Failed to delete message');
+                }
+            } catch (err) {
+                console.error("Delete fail:", err);
+                alert('Connection error');
+            }
+        }
+    </script>
+</body>
+
+</html>

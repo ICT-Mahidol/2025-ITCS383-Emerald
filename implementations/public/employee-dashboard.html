@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,6 +8,7 @@
     <title>Employee Dashboard — SpaceHub</title>
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
     <div class="dashboard">
         <nav class="dashboard__nav">
@@ -32,11 +34,16 @@
         <div class="dashboard__content">
             <!-- Tab Navigation -->
             <div class="tab-nav">
-                <button class="tab-nav__item tab-nav__item--active" onclick="switchTab('reservations')">Reservations</button>
+                <button class="tab-nav__item tab-nav__item--active"
+                    onclick="switchTab('reservations')">Reservations</button>
                 <button class="tab-nav__item" onclick="switchTab('checkin')">Check-In</button>
                 <button class="tab-nav__item" onclick="switchTab('equipment')">Equipment</button>
                 <button class="tab-nav__item" onclick="switchTab('expenses')">Expenses</button>
                 <button class="tab-nav__item" onclick="switchTab('cctv')">CCTV</button>
+                <button class="tab-nav__item" onclick="switchTab('support')">
+                    Support <span id="supportBadgeCount" class="status-badge"
+                        style="display:none; background:#ff4d4d; color:white; border-radius:10px; padding:2px 8px; font-size:0.75rem; margin-left:5px;">0</span>
+                </button>
             </div>
 
             <!-- Reservations Tab -->
@@ -57,7 +64,8 @@
             <div class="tab-content" id="tab_checkin" style="display:none;">
                 <div class="booking-section">
                     <h2 class="booking-section__title">Customer Check-In</h2>
-                    <p class="booking-section__desc">Verify and check in customers with confirmed reservations for today.</p>
+                    <p class="booking-section__desc">Verify and check in customers with confirmed reservations for
+                        today.</p>
                     <div id="checkinList" class="data-table-container">
                         <p class="loading-text">Loading today's reservations...</p>
                     </div>
@@ -83,7 +91,8 @@
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="expCategory">Category</label>
-                                <select id="expCategory" style="width:100%;padding:12px 16px;border:1.5px solid var(--gray-200);border-radius:10px;font-size:0.92rem;font-family:'Inter',sans-serif;background:var(--white);">
+                                <select id="expCategory"
+                                    style="width:100%;padding:12px 16px;border:1.5px solid var(--gray-200);border-radius:10px;font-size:0.92rem;font-family:'Inter',sans-serif;background:var(--white);">
                                     <option value="utilities">Utilities</option>
                                     <option value="supplies">Supplies</option>
                                     <option value="maintenance">Maintenance</option>
@@ -107,7 +116,8 @@
                         <button class="btn-apply" onclick="recordExpense()">Record Expense</button>
                     </div>
 
-                    <h3 style="margin-top:32px;margin-bottom:16px;font-size:1.1rem;color:var(--gray-800);">Today's Expenses</h3>
+                    <h3 style="margin-top:32px;margin-bottom:16px;font-size:1.1rem;color:var(--gray-800);">Today's
+                        Expenses</h3>
                     <div id="expensesList" class="data-table-container">
                         <p class="loading-text">Loading expenses...</p>
                     </div>
@@ -124,6 +134,19 @@
                     </div>
                 </div>
             </div>
+
+            <div class="tab-content" id="tab_support" style="display:none;">
+                <div class="booking-section">
+                    <h2 class="booking-section__title">User Support Tickets</h2>
+                    <p class="booking-section__desc">Manage and respond to user inquiries from the live chat and support
+                        system.</p>
+
+                    <div id="ticketListContainer" class="data-table-container">
+                        <p class="loading-text">Fetching support requests...</p>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 
@@ -144,10 +167,23 @@
         }
 
         function switchTab(tab) {
+            // 1. ซ่อนทุกหน้า และลบสถานะ Active ของทุกปุ่ม (เหมือนเดิม)
             document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
             document.querySelectorAll('.tab-nav__item').forEach(t => t.classList.remove('tab-nav__item--active'));
-            document.getElementById('tab_' + tab).style.display = 'block';
+
+            // 2. แสดงหน้าที่มี id ตรงกับ tab ที่เรากด
+            const targetTab = document.getElementById('tab_' + tab);
+            if (targetTab) {
+                targetTab.style.display = 'block';
+            }
+
+            // 3. ใส่สีปุ่มให้เป็นสีน้ำเงิน (Active)
             event.target.classList.add('tab-nav__item--active');
+
+            // 4. ส่วนที่เพิ่ม: ถ้ากดหน้า Support ให้สั่งโหลดข้อมูลทันที
+            if (tab === 'support') {
+                loadSupportTickets();
+            }
         }
 
         async function loadReservations() {
@@ -163,26 +199,48 @@
                     return;
                 }
 
+                // แก้ไขตั้งแต่บรรทัด container.innerHTML ไปจนถึงก่อนปิด } catch
                 container.innerHTML = `
-                    <table class="data-table">
-                        <thead>
-                            <tr><th>Customer</th><th>Email</th><th>Time</th><th>Desks</th><th>Status</th></tr>
-                        </thead>
-                        <tbody>
-                            ${data.reservations.map(r => {
-                                const desks = typeof r.desks === 'string' ? JSON.parse(r.desks) : r.desks;
-                                const deskLabels = Array.isArray(desks) ? desks.map(d => d.label).join(', ') : 'N/A';
-                                return `<tr>
-                                    <td>${r.first_name} ${r.last_name}</td>
-                                    <td>${r.email}</td>
-                                    <td>${r.start_time?.substring(0,5)} - ${r.end_time?.substring(0,5)}</td>
-                                    <td>${deskLabels}</td>
-                                    <td><span class="status-badge status-badge--${r.status === 'checked_in' ? 'checked-in' : r.status}">${r.status}</span></td>
-                                </tr>`;
-                            }).join('')}
-                        </tbody>
-                    </table>
-                `;
+        <table class="data-table">
+            <thead>
+                <tr>
+                <th>Booking ID</th>
+                <th>Customer</th>
+                <th>Email</th>
+                <th>Time</th>
+                <th>Desks</th>
+                <th>Status</th>
+                </tr>
+            </thead>
+        <tbody>
+            ${data.reservations.map(r => {
+                    const desks = typeof r.desks === 'string' ? JSON.parse(r.desks) : r.desks;
+                    const deskLabels = Array.isArray(desks) ? desks.map(d => d.label).join(', ') : 'N/A';
+
+                    // แก้ไขส่วนการสร้างแถวข้อมูล (Row)
+                    return `<tr>
+                    <td style="font-weight:700; color:var(--primary);">BK-${r.id}</td>
+                    <td>${r.first_name} ${r.last_name}</td>
+                    <td>${r.email}</td>
+                    <td>${r.start_time?.substring(0, 5)} - ${r.end_time?.substring(0, 5)}</td>
+                    <td>${deskLabels}</td>
+                    <td>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                    <span class="status-badge status-badge--${r.status === 'checked_in' ? 'checked-in' : r.status}">${r.status}</span>
+                    ${r.status === 'pending' ? `
+                     <button class="btn-small" 
+                        style="background:var(--success); color:white; border:none; cursor:pointer; padding:4px 8px;" 
+                        onclick="handleConfirmBooking(${r.id})">
+                    Confirm
+                </button>
+                ` : ''}
+                </div>
+                </td>
+                </tr>`;
+                }).join('')}
+        </tbody>
+    </table>
+`;
             } catch (err) {
                 document.getElementById('reservationsList').innerHTML = '<p class="error-text">Failed to load reservations.</p>';
             }
@@ -208,7 +266,7 @@
                         <div class="checkin-card">
                             <div class="checkin-card__info">
                                 <div class="checkin-card__name">${r.first_name} ${r.last_name}</div>
-                                <div class="checkin-card__details">${r.start_time?.substring(0,5)} - ${r.end_time?.substring(0,5)} | ${deskLabels}</div>
+                                <div class="checkin-card__details">${r.start_time?.substring(0, 5)} - ${r.end_time?.substring(0, 5)} | ${deskLabels}</div>
                             </div>
                             <button class="btn-checkin" onclick="checkInCustomer(${r.id})">Check In</button>
                         </div>
@@ -361,6 +419,126 @@
                 document.getElementById('cctvGrid').innerHTML = '<p class="error-text">Failed to load CCTV feeds.</p>';
             }
         }
+
+        async function loadSupportTickets() {
+            const container = document.getElementById('ticketListContainer');
+            try {
+                const res = await fetch(`/api/employee/tickets?userId=${currentUser.id}`);
+                const data = await res.json();
+
+                // หากไม่มีข้อมูลคำถาม
+                if (!data.tickets || data.tickets.length === 0) {
+                    container.innerHTML = '<p class="empty-text" style="text-align:center; padding:20px; color:var(--gray-500);">No pending support requests.</p>';
+                    return;
+                }
+
+                // แสดงตารางข้อมูลเมื่อโหลดสำเร็จ
+                container.innerHTML = `
+            <table class="data-table">
+                <thead>
+                    <tr><th>ID</th><th>Category</th><th>Message</th><th>Action</th></tr>
+                </thead>
+                <tbody>
+                    ${data.tickets.map(t => `
+                        <tr>
+                            <td>#${t.id}</td>
+                            <td><span class="status-badge">${t.category}</span></td>
+                            <td>${t.message}</td>
+                            <td><button class="btn-small" onclick="openReplyModal(${t.id}, \`${t.message.replace(/`/g, '\\`').replace(/\n/g, ' ')}\`)">Reply</button></td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>`;
+            } catch (err) {
+                // หากโหลดไม่สำเร็จ ให้เปลี่ยนจากคำว่า Fetching เป็นข้อความแจ้ง Error
+                container.innerHTML = '<p class="error-text" style="text-align:center; padding:20px; color:red;">Failed to connect to the server. Please check your Backend.</p>';
+            }
+        }
+
+        function openReplyModal(id, message) {
+            const idElem = document.getElementById('replyTicketId');
+            const msgElem = document.getElementById('originalMessage');
+            const modal = document.getElementById('replyModal');
+
+            if (idElem && msgElem && modal) {
+                idElem.innerText = id;
+                msgElem.innerText = `User said: "${message}"`;
+                modal.style.display = 'flex'; // ใช้ flex เพื่อให้กึ่งกลางตาม CSS ใหม่
+            }
+        }
+
+        // ฟังก์ชันปิด Modal
+        function closeModal() {
+            const modal = document.getElementById('replyModal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        // แก้ไขฟังก์ชัน submitReply ให้ทำงานร่วมกับ Modal ได้จริง
+        async function submitReply() {
+            const ticketId = document.getElementById('replyTicketId').innerText;
+            const replyText = document.getElementById('adminReplyText').value;
+
+            if (!replyText) {
+                showToast('Please enter a reply.', 'error');
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/support/tickets/${ticketId}/reply`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        reply: replyText,
+                        userId: currentUser.id // ดึง ID ของ Admin ที่กำลังตอบ
+                    })
+                });
+
+                if (res.ok) {
+                    showToast('Reply sent and User notified!', 'success');
+                    closeModal();
+                    document.getElementById('adminReplyText').value = ''; // ล้างค่าในช่องพิมพ์
+                    loadSupportTickets(); // รีโหลดตารางเพื่อให้รายการที่ตอบแล้วหายไป
+                } else {
+                    showToast('Failed to send reply.', 'error');
+                }
+            } catch (err) {
+                showToast('Connection error.', 'error');
+            }
+        }
+
+        async function handleConfirmBooking(bookingId) {
+            if (!confirm('Confirm this payment and booking?')) return;
+
+            try {
+                const res = await fetch(`/api/employee/bookings/${bookingId}/confirm`, { method: 'POST' });
+                if (res.ok) {
+                    showToast('Confirmed successfully!');
+                    loadReservations(); // ฟังก์ชันโหลดตารางเดิมของคุณ
+                }
+            } catch (err) {
+                showToast('Error confirming booking', 'error');
+            }
+        }
     </script>
+
+    <div id="replyModal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <span id="replyTicketId" style="display:none;"></span>
+            <h3 style="margin-bottom: 10px;">Reply to Support Ticket</h3>
+            <p id="originalMessage"
+                style="font-style: italic; color: #666; margin-bottom: 15px; background: #f0f4f8; padding: 10px; border-radius: 8px;">
+            </p>
+
+            <textarea id="adminReplyText" placeholder="Write your solution here..."
+                style="width:100%; height:150px; border-radius:10px; border:1.5px solid var(--gray-200); padding:15px; margin-bottom: 20px; font-family: inherit; resize: none;"></textarea>
+
+            <div style="display:flex; gap:10px; justify-content: flex-end;">
+                <button class="btn" onclick="closeModal()" style="background: #eee;">Close</button>
+                <button class="btn btn--primary" onclick="submitReply()">Send to User</button>
+            </div>
+        </div>
+    </div>
+
 </body>
+
 </html>

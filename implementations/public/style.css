@@ -810,16 +810,22 @@ a {
 }
 
 .auth-card__logo {
-  width: 52px;
-  height: 52px;
+  /* ขยายขนาดกล่องไอคอน */
+  width: 80px;  /* ปรับเพิ่มจากเดิมที่ประมาณ 52px */
+  height: 80px; /* ปรับเพิ่มจากเดิมที่ประมาณ 52px */
+  
+  /* ขยายขนาด Emoji หูฟังข้างใน */
+  font-size: 2.5rem; /* ปรับให้ใหญ่ขึ้นเพื่อให้เต็มกล่อง */
+  
+  /* ปรับสไตล์เพิ่มเติมให้รับกับขนาดที่ใหญ่ขึ้น */
   background: linear-gradient(135deg, var(--primary), var(--primary-light));
-  border-radius: 14px;
+  border-radius: 20px; /* เพิ่มความโค้งมนให้ดูพรีเมียมขึ้น */
+  margin: 0 auto 24px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto 20px;
-  font-size: 1.4rem;
   color: white;
+  box-shadow: 0 8px 20px var(--primary-glow); /* เพิ่มเงาให้ไอคอนดูมีมิติ */
 }
 
 .auth-card__title {
@@ -1743,15 +1749,8 @@ a {
 }
 
 @keyframes float {
-
-  0%,
-  100% {
-    transform: translateY(0) rotate(0deg);
-  }
-
-  50% {
-    transform: translateY(-25px) rotate(3deg);
-  }
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-25px) rotate(3deg); } /* ขยับขึ้น 25px */
 }
 
 /* ── Responsive ── */
@@ -2478,19 +2477,22 @@ a {
   content: '';
   position: absolute;
   inset: 0;
-  background: repeating-linear-gradient(
-    0deg,
-    rgba(255, 255, 255, 0.02) 0px,
-    rgba(255, 255, 255, 0.02) 1px,
-    transparent 1px,
-    transparent 3px
-  );
+  background: repeating-linear-gradient(0deg,
+      rgba(255, 255, 255, 0.02) 0px,
+      rgba(255, 255, 255, 0.02) 1px,
+      transparent 1px,
+      transparent 3px);
   animation: scanline 4s linear infinite;
 }
 
 @keyframes scanline {
-  0% { transform: translateY(0); }
-  100% { transform: translateY(10px); }
+  0% {
+    transform: translateY(0);
+  }
+
+  100% {
+    transform: translateY(10px);
+  }
 }
 
 .cctv-feed__live {
@@ -2505,8 +2507,15 @@ a {
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
 }
 
 .cctv-feed__offline-text {
@@ -2696,4 +2705,360 @@ a {
   font-size: 0.92rem;
   text-align: center;
   padding: 24px;
+}
+
+/* ============================================
+   BUGHAIR ADDITIONS — Support & Notifications
+   ============================================ */
+/* --- Enhanced Support Interactions & Rounded Corners --- */
+
+/* Add a subtle glow and rounded corners when focusing on inputs */
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px var(--primary-glow);
+  transform: translateY(-2px);
+  /* Slight lift effect */
+  border-radius: var(--radius);
+  /* Ensures rounded corners on focus */
+  transition: var(--transition);
+}
+
+/* Base styles for Select and Textarea to ensure they are always rounded */
+select.form-group.input,
+.form-group textarea {
+  border-radius: var(--radius) !important;
+  /* Force rounded corners */
+  border: 1.5px solid var(--gray-200);
+  padding: 12px;
+  font-family: inherit;
+  transition: var(--transition);
+}
+
+/* Specialized Select styling to remove default arrow and add a custom one */
+select.form-group.input {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231a73e8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 1.1em;
+  padding-right: 40px;
+}
+
+/* Make the Submit button feel more interactive and rounded */
+.btn-submit {
+  transition: var(--transition);
+  border-radius: var(--radius);
+}
+
+.btn-submit:hover {
+  transform: translateY(-2px) scale(1.02);
+  /* Pop effect */
+  box-shadow: 0 8px 25px var(--primary-glow);
+}
+
+.btn-submit:active {
+  transform: translateY(0) scale(0.98);
+  /* Press down effect */
+}
+
+/* Smooth fade-in for the entire card when page loads */
+.auth-card {
+  animation: fadeInUp 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: var(--radius-lg);
+  /* Uses the larger 20px radius for the main card */
+}
+
+/* --- Chat Interface Enhancements --- */
+
+/* --- Floating Chat Widget Components --- */
+
+/* The floating button that stays on top */
+.chat-toggle {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  box-shadow: var(--shadow-lg);
+  cursor: pointer;
+  transition: var(--transition);
+  z-index: 2000;
+}
+
+/* Chat window container */
+.chat-window {
+  position: fixed;
+  bottom: 100px;
+  right: 30px;
+  width: 350px;
+  height: 450px;
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  display: none;
+  /* Hidden by default */
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 1999;
+  animation: fadeInUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.chat-window.show {
+  display: flex;
+}
+
+/* User message bubble */
+.user-message {
+  align-self: flex-end;
+  background: var(--primary);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 12px 12px 0 12px;
+  font-size: 0.85rem;
+  max-width: 80%;
+  box-shadow: var(--shadow-sm);
+}
+
+/* --- Notification System Components --- */
+
+/* Badge for the notification bell icon (to be used in Dashboard) */
+.noti-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background-color: var(--danger);
+  color: var(--white);
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 50px;
+  border: 2px solid var(--white);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Dropdown list for recent notifications */
+.noti-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 280px;
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--gray-200);
+  padding: 12px;
+  z-index: 1100;
+}
+
+.noti-item {
+  padding: 10px;
+  border-bottom: 1px solid var(--gray-100);
+  font-size: 0.85rem;
+  color: var(--gray-600);
+  transition: var(--transition);
+}
+
+.noti-item:last-child {
+  border-bottom: none;
+}
+
+.noti-item:hover {
+  background: var(--light-blue);
+  color: var(--primary);
+  border-radius: 6px;
+}
+
+/* สไตล์เพื่อให้ Modal เด้งขึ้นมากลางจอจริงๆ */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  /* พื้นหลังมืดโปร่งแสง */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  /* ให้อยู่เหนือทุกอย่าง */
+}
+
+.modal-content {
+  background: white;
+  padding: 30px;
+  border-radius: 15px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  position: relative;
+}
+
+/* ปรับแต่ง Message Card ให้ดูพรีเมียมขึ้น */
+.message-card {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 20px;
+  border-left: 8px solid var(--gray-200);
+  /* แถบสีเทาสำหรับข้อความที่อ่านแล้ว */
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+/* เน้นสีฟ้าเมื่อมีคำตอบใหม่ที่ยังไม่ได้อ่าน */
+.message-card--unread {
+  border-left-color: var(--primary);
+  background: linear-gradient(to right, #f0f7ff, white);
+}
+
+.admin-reply {
+  margin-top: 15px;
+  padding: 18px;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px dashed var(--success);
+  /* เส้นประสีเขียวล้อมรอบคำตอบของแอดมิน */
+}
+
+.msg-badge {
+  background-color: #ff4d4d;
+  /* สีแดงแจ้งเตือน */
+  color: white;
+  font-size: 11px;
+  font-weight: bold;
+  padding: 2px 7px;
+  border-radius: 10px;
+  margin-left: auto;
+  /* ดันไปทางขวาสุดของเมนู */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.alert-banner {
+  background: linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%);
+  color: var(--primary);
+  padding: 1.5rem 2rem; /* เพิ่ม padding ให้ดูหนาและพรีเมียมขึ้น */
+  border-radius: 12px;
+  border: 2px solid var(--primary-light);
+  box-shadow: 0 4px 15px rgba(26, 115, 232, 0.15);
+  margin-bottom: 25px;
+  display: flex; /* ใช้ flex เพื่อคุมเนื้อหา */
+  align-items: center; /* จัดกลางแนวตั้ง */
+  justify-content: center; /* จัดกลางแนวนอน */
+  min-height: 80px; /* เพิ่มความสูงขั้นต่ำให้ดูเต็มกรอบ */
+}
+
+@keyframes bannerPulse {
+  0% { box-shadow: 0 4px 15px rgba(26, 115, 232, 0.15); }
+  50% { box-shadow: 0 4px 25px rgba(26, 115, 232, 0.4); } /* แสงวาบออก */
+  100% { box-shadow: 0 4px 15px rgba(26, 115, 232, 0.15); }
+}
+
+.alert-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px; /* เพิ่มระยะห่างระหว่างไอคอนกับข้อความ */
+  width: 100%;
+}
+
+.alert-icon {
+  font-size: 2.2rem;
+  display: inline-block;
+  /* ปรับเป็น 1.2s ให้ดูสั่นแบบขยันขึ้นนิดนึง */
+  animation: shakeBell 1.2s ease-in-out infinite; 
+  transform-origin: top center;
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.1));
+}
+
+.marquee-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px; /* เพิ่มความสูงให้มีพื้นที่เหลือให้ตัวอักษรขยับขึ้นลง */
+  overflow: visible; /* สำคัญ: ต้องเปิดให้เห็นส่วนที่ขยับออกนอกขอบเล็กน้อย */
+}
+
+.marquee-text {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--primary);
+  display: inline-block;
+  /* ปรับจาก 3s เป็น 1.5s เพื่อให้ขยับเร็วขึ้น */
+  animation: verticalFloat 1.5s ease-in-out infinite; 
+}
+
+@keyframes marquee {
+  0% {
+    /* เริ่มต้นที่ขอบขวาสุดของ Container */
+    transform: translateX(100%);
+  }
+  100% {
+    /* วิ่งไปจนพ้นขอบซ้ายสุด */
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes shakeBell {
+  0%, 100% { transform: rotate(0deg); }
+  10%, 20% { transform: rotate(15deg); }
+  30%, 50%, 70% { transform: rotate(-15deg); }
+  40%, 60% { transform: rotate(15deg); }
+  80% { transform: rotate(0deg); }
+}
+
+@keyframes verticalFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); } /* ขยับขึ้นเบาๆ 3px */
+}
+
+@keyframes logoFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); } /* ขยับขึ้นแค่ 10px จะดูแพงกว่าครับ */
+}
+
+.data-table th:nth-child(1) {
+  width: 120px;
+}
+
+/* Booking ID */
+.data-table th:nth-child(4) {
+  width: 140px;
+}
+
+/* Time */
+.data-table th:nth-child(6) {
+  min-width: 150px;
+}
+
+/* Status & Action */
+
+.data-table td {
+  vertical-align: middle;
+  /* จัดให้อยู่กึ่งกลางแนวตั้ง */
+  white-space: nowrap;
+  /* กันข้อความตัดบรรทัดจนแถวเบี้ยว */
+}
+
+.toast--info {
+  background-color: #3b82f6;
+  /* สีน้ำเงินสำหรับแจ้งเตือนพนักงาน */
+  color: white;
 }
